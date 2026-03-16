@@ -1,0 +1,2822 @@
+#include <Arduino.h>
+#include "Ext_Var.h"
+
+float counter=0.0;
+float calibration_value=3.0;
+float speed=0.5;
+float Max_liter=0.0;
+float temp_error=0.0;
+long start_tt=0;
+// float speed=1.0;
+bool but1=0;
+bool mainscreenflag=0;
+bool usersettings=0;
+bool servicemenu=0;
+bool uppointer=0;
+bool downpointer=0;
+bool inmenu=0;
+bool secondaryyes=0;
+bool solenoidoverride=1;
+bool flowoverride=0;
+bool speedup=0;
+bool secondarytimerflag=0;
+
+bool factoryresetflag=1;
+
+bool leveloverride=0;
+bool probeoverride=0;
+bool time_skip=0;
+
+uint8_t skip_count=0;
+uint8_t longpress_count=0;
+int Heatersafteytemp=50;
+
+
+// bool in_usersettings=0;
+
+//Button Pins
+#define UP 35
+#define DOWN 32
+#define BACK 26
+#define MODE 36
+
+
+OneButton up_button(UP, true);
+OneButton down_button(DOWN, true);
+OneButton back_button(BACK, true);
+OneButton mode_button(MODE, true);
+
+//DEFINATION
+
+buttonClass:: buttonClass()
+{}
+
+void buttonClass:: button_setup()
+{
+    pinMode(UP,INPUT_PULLUP);
+    pinMode(DOWN,INPUT_PULLUP);
+    pinMode(BACK,INPUT_PULLUP);
+    pinMode(MODE,INPUT_PULLUP);
+    
+    up_button.attachClick(increment);
+    up_button.attachDuringLongPress(long_press_up);
+    down_button.attachClick(decrement);
+    down_button.attachDuringLongPress(long_press_down);
+    mode_button.attachDuringLongPress(user_settings);
+    mode_button.attachClick(enter_function);
+    back_button.attachClick(back_screen);
+    back_button.setPressMs(1000);
+    back_button.attachDuringLongPress(back_to_home);
+    
+//  
+}
+
+void buttonClass:: button_ticks()
+{
+    up_button.tick();
+    down_button.tick();
+    mode_button.tick();
+    back_button.tick();
+}
+
+void buttonClass:: but_check()//------------------------------UP DOWN Key Long Press detection
+{
+  if(digitalRead(UP)== LOW && digitalRead(DOWN) == LOW && but1 == 0)//----------Check for button press
+  {
+    start_tt = millis();//-------if both keys are pressed start the time calculation
+    but1 = 1;
+  }
+  else if(digitalRead(UP)== LOW && digitalRead(DOWN) == LOW && but1 == 1)//--------Check for button is continously pressed
+  {
+    if((millis() - start_tt) >= 1000)//-------------------after 3 sec completion
+    {
+        lcd.clear();
+        screen=ServiceMenuScreen1;//------------Go to service menu mode.
+        servicemenu=1;
+        mainscreenflag=0;
+        uppointer=1;
+        downpointer=0;
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print(">");
+        digitalWrite(BUZZER,HIGH);
+        buzzerclass_object.Buzzer_beep(1000);
+        buzzerclass_object.Buzzer_start();
+        return;
+    }
+  }
+  else if(but1 == 1)
+  {
+    if(digitalRead(UP)== HIGH || digitalRead(DOWN) == HIGH)
+    {
+      but1 = 0;
+    }
+  }
+}
+
+void buttonClass:: back_to_home()
+{
+    if(!mainscreenflag  && !closetap){
+    lcd.clear();
+    digitalWrite(BUZZER,HIGH);
+    buzzerclass_object.Buzzer_beep(1000);
+    buzzerclass_object.Buzzer_start();
+    
+    // usersettings=0;
+    // servicemenu=0;
+    process_flag=0;
+    inmenu=0;
+    secondarytimerflag=0;
+    process_object.heater1_stop();
+    buzzerclass_object.heater_stop();
+    digitalWrite(SOLENOID1,LOW);
+    digitalWrite(SOLENOID2,LOW);
+    eeprom_object.eeprom_datawrite();
+    screen=MainScreen;
+    if(!solenoidoverride && !usersettings && !servicemenu  ) 
+    {
+         Probe1_Err=0;
+        waterlevel_error_flag=0;
+        flow_error_checkflag=0;
+        closetap=1;
+        error_check_flag=1;
+        screen=ErrorScreen;
+        // screen=MainScreen;
+    }
+    else
+    {
+
+        usersettings=0;
+        servicemenu=0;
+        screen=MainScreen;
+        // Probe1_Err=0;
+        // waterlevel_error_flag=0;
+        // flow_error_checkflag=0;
+        // closetap=1;
+        // error_check_flag=1;
+        // screen=ErrorScreen;
+
+    }  
+    // process_object.process_stop();
+    }
+
+}
+
+void buttonClass::long_press_up()
+{
+    // counter+=0.5;
+    if(digitalRead(DOWN)==HIGH)
+    {
+        if(mainscreenflag)
+        {
+            Max_liter=(2*optime[optimecounter])*(variant/10.0);
+            if(counter<Max_liter)
+            {
+                longpress_count++;
+                if(longpress_count==5)
+                {
+                    counter+=0.5;
+                    longpress_count=0;
+                }
+            }
+        }
+    
+
+        if(screen==CalibrationSettings)
+        {
+            Max_liter=(2*optime[optimecounter])*(variant/10.0);
+            if(calibration_value<Max_liter)
+            {
+                longpress_count++;
+                if(longpress_count==5)
+                {
+                    calibration_value+=0.1;
+                    longpress_count=0;
+                }
+            }
+        }
+    
+        if(screen==SafteyTemperatureSettings)
+        {
+            if(Heatersafteytemp<200)
+            {
+            longpress_count++;
+            if(longpress_count==5)
+            {
+                Heatersafteytemp+=5;
+                longpress_count=0;
+            }
+            }
+        }
+    }
+
+}
+
+void buttonClass::long_press_down()
+{
+    if(digitalRead(UP)==HIGH)
+    {
+        if(counter>=0.5)
+        {
+            if(mainscreenflag)
+            {
+                longpress_count++;
+                if(longpress_count==5)
+                {
+                    counter-=0.5;
+                    longpress_count=0;
+                }
+            }
+        }
+        if(screen==CalibrationSettings)
+        {
+            if(calibration_value>0.0)
+            {
+                longpress_count++;
+                if(longpress_count==5)
+                {
+                    calibration_value-=0.1;
+                    longpress_count=0;
+                }
+            }
+        }
+
+        if(screen==SafteyTemperatureSettings)
+        {
+            if(Heatersafteytemp>50)
+            {
+            longpress_count++;
+            if(longpress_count==5)
+            {
+                Heatersafteytemp-=5;
+                longpress_count=0;
+            }
+            }
+        }
+    }
+}
+void buttonClass::increment()
+{
+    if(mainscreenflag){
+        Max_liter=(2*optime[optimecounter])*(variant/10.0);
+        if(counter<Max_liter)
+        {
+        counter+=0.5;
+        }
+    }
+    switch(screen)
+    {
+        case ProbeCalibrationSettings:
+            temp_error+=0.1;
+
+        break;
+
+
+        case SafteyTemperatureSettings:
+            if(Heatersafteytemp<200)
+            {
+            Heatersafteytemp+=5;
+            }
+        break;
+
+
+        case SecondaryFillSettings:
+            if(!secondaryyes)
+            {
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">");
+                secondaryyes=1;
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(11,1);
+                lcd.print(">");
+                secondaryyes=0;
+            }
+        break;
+        
+        case CalibrationSettings:
+            calibration_value+=0.1;
+        break;
+
+         case FactoryResetScreen:
+            if(!factoryresetflag)
+            {
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">");
+                factoryresetflag=1;
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(11,1);
+                lcd.print(">");
+                factoryresetflag=0;
+            }
+        break;
+
+
+//  **************** User Settings *******************
+
+
+        case UserSettingsScreen1:
+
+                if(uppointer)
+                {
+                    screen=UserSettingsScreen4;
+                    lcd.clear();
+                    lcd.setCursor(0,1);
+                    lcd.print(">");
+                    uppointer=0;
+                    downpointer=1;
+
+                }
+                else
+                {
+                    lcd.clear();
+                    lcd.setCursor(0,0);
+                    lcd.print(">");
+                    uppointer=1;
+                    downpointer=0;
+                }
+            
+            break;
+
+            case UserSettingsScreen2:
+            if(uppointer)
+            {
+                if(dduflag)
+                {
+                    screen=UserSettingsScreen1;
+                    lcd.clear();
+                    lcd.setCursor(0,0);
+                    lcd.print(">");
+                    uppointer=1;
+                    downpointer=0;
+                }
+                else
+                {
+                    screen=UserSettingsScreen3;
+                    lcd.clear();
+                    lcd.setCursor(0,1);
+                    lcd.print(">");
+                    uppointer=0;
+                    downpointer=1;
+                }
+            }
+            else 
+            {
+              lcd.clear();
+              lcd.setCursor(0,0);
+              lcd.print(">");
+              uppointer=1;
+              downpointer=0;
+            }
+            break;
+
+            case UserSettingsScreen3:
+          if(uppointer)
+            {
+                screen=UserSettingsScreen2;
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+        break; 
+
+        case UserSettingsScreen4:
+          if(uppointer)
+            {
+                screen=UserSettingsScreen3;
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+        break;
+
+//  **************** Service menu Settings *******************        
+
+        case ServiceMenuScreen1:
+            if(dduflag)
+            {
+                if(uppointer)
+                {
+                    screen=ServiceMenuScreen5;
+                    lcd.clear();
+                    lcd.setCursor(0,1);
+                    lcd.print(">");
+                     uppointer=0;
+                    downpointer=1;
+                }
+                else
+                {
+                    lcd.clear();
+                    lcd.setCursor(0,0);
+                    lcd.print(">");
+                    uppointer=1;
+                    downpointer=0;
+                }
+            }
+            else
+            {
+                if(uppointer)
+                {
+                    screen=SDUServiceMenuScreen3;
+                    lcd.clear();
+                    lcd.setCursor(0,1);
+                    lcd.print(">");
+                     uppointer=0;
+                    downpointer=1;
+                }
+                else
+                {
+                    lcd.clear();
+                    lcd.setCursor(0,0);
+                    lcd.print(">");
+                    uppointer=1;
+                    downpointer=0;
+                }
+
+            }
+        break;
+
+        case ServiceMenuScreen2:
+          if(uppointer)
+            {
+                screen=ServiceMenuScreen1;
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+        break;
+
+        case ServiceMenuScreen3:
+          if(uppointer)
+            {
+                screen=ServiceMenuScreen2;
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+        break;
+
+        case ServiceMenuScreen4:
+          if(uppointer)
+            {
+                screen=ServiceMenuScreen3;
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+        break;
+
+        case ServiceMenuScreen5:
+          if(uppointer)
+            {
+                screen=ServiceMenuScreen4;
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+        break;
+
+        case SDUServiceMenuScreen3:
+          if(uppointer)
+            {
+                screen=ServiceMenuScreen2;
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                uppointer=1;
+                downpointer=0;
+            }
+        break;
+
+        // case UserSettingsScreen1:
+        //     if(dduflag)
+        //     {
+        //         if(uppointer)
+        //         {
+        //             screen=UserSettingsScreen8;
+        //             lcd.clear();
+        //             lcd.setCursor(0,1);
+        //             lcd.print(">");
+        //             uppointer=0;
+        //             downpointer=1;
+
+        //         }
+        //         else
+        //         {
+        //             lcd.clear();
+        //             lcd.setCursor(0,0);
+        //             lcd.print(">");
+        //             uppointer=1;
+        //             downpointer=0;
+        //         }
+        //     }
+        //     else
+        //     {
+        //         if(uppointer)
+        //         {
+        //             screen=SDUUserSettingsScreen5;
+        //             lcd.clear();
+        //             lcd.setCursor(0,1);
+        //             lcd.print(">");
+        //             uppointer=0;
+        //             downpointer=1;
+
+        //         }
+        //         else
+        //         {
+        //             lcd.clear();
+        //             lcd.setCursor(0,0);
+        //             lcd.print(">");
+        //             uppointer=1;
+        //             downpointer=0;
+        //         }
+
+        //     }
+        //     break;
+        
+        // case UserSettingsScreen2:
+        //     if(uppointer)
+        //     {
+        //       screen=UserSettingsScreen1;
+        //       lcd.clear();
+        //       lcd.setCursor(0,0);
+        //       lcd.print(">");
+        //       uppointer=1;
+        //       downpointer=0;
+        //     }
+        //     else 
+        //     {
+        //       lcd.clear();
+        //       lcd.setCursor(0,0);
+        //       lcd.print(">");
+        //       uppointer=1;
+        //       downpointer=0;
+        //     }
+        //     break;
+
+        // case UserSettingsScreen3:
+        //   if(uppointer)
+        //     {
+        //         screen=UserSettingsScreen2;
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+        //     else
+        //     {
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+        // break; 
+
+        // case UserSettingsScreen4:
+        //   if(uppointer)
+        //     {
+        //         screen=UserSettingsScreen3;
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+        //     else
+        //     {
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+        // break;
+
+        // case UserSettingsScreen5:
+        //   if(uppointer)
+        //     {
+        //         screen=UserSettingsScreen4;
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+        //     else
+        //     {
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+        // break;
+
+        // case UserSettingsScreen6:
+        //   if(uppointer)
+        //     {
+        //         screen=UserSettingsScreen5;
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+        //     else
+        //     {
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+        // break;
+
+        // case UserSettingsScreen7:
+        //   if(uppointer)
+        //     {
+        //         screen=UserSettingsScreen6;
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+        //     else
+        //     {
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+        // break;
+        // case UserSettingsScreen8:
+        //     if(uppointer)
+        //     {
+        //         screen=UserSettingsScreen7;
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+        //     else
+        //     {
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+
+        // break;
+
+        // case SDUUserSettingsScreen5:
+        //     if(uppointer)
+        //     {
+        //         screen=UserSettingsScreen4;
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+        //     else
+        //     {
+        //         lcd.clear();
+        //         lcd.setCursor(0,0);
+        //         lcd.print(">");
+        //         uppointer=1;
+        //         downpointer=0;
+        //     }
+            
+        // break;
+        
+        case OperatingTimeSettings:
+            if(optimecounter<3){
+            optimecounter++;
+            }
+            else
+            {
+                optimecounter=0;
+            }
+        break;
+
+        case SubProductTypeSettings:
+            if(prodtypecounter<2){
+            prodtypecounter++;
+            }
+            else
+            {
+                prodtypecounter=0;
+            }
+        break;
+
+        case SolenoidControlSettings:
+            if(!solenoidoverride)
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> OVERRIDE");
+                solenoidoverride=1;
+            }
+            else
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> ACTIVE     ");
+                solenoidoverride=0;
+            }
+        break;
+
+        case TempSensorSettings:
+            if(!probeoverride)
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> OVERRIDE");
+                probeoverride=1;
+            }
+            else
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> ACTIVE     ");
+                probeoverride=0;
+            }
+        break;
+
+        case LevelSensorSettings:
+            if(!leveloverride)
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> OVERRIDE");
+                leveloverride=1;
+            }
+            else
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> ACTIVE     ");
+                leveloverride=0;
+            }
+        break;
+
+        case FlowControlSettings:
+          if(!flowoverride)
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> OVERRIDE");
+                flowoverride=1;
+            }
+            else
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> ACTIVE     ");
+                flowoverride=0;
+            }
+        break;
+
+        case ProductTypeSettings:
+            // lcd.clear();
+
+            // lcd.setCursor(0,1);
+            // lcd.print(">SDU    ");
+            // dduflag=0;
+
+            if(!dduflag)
+            {
+                lcd.clear();
+                lcd.setCursor(11,1);
+                lcd.print(">DDU");
+                dduflag=1;
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">SDU     ");
+                dduflag=0;
+            }
+        break;
+        break;
+            
+            
+    }
+
+}
+
+void buttonClass::decrement()
+{
+ if(mainscreenflag){
+    if(counter>0.0){
+    // speed=0.5;
+    counter-=0.5;
+    }
+  }
+
+  switch(screen)
+  {
+    case ProbeCalibrationSettings:
+            temp_error-=0.1;
+
+    break;
+
+    case SafteyTemperatureSettings:
+        if(Heatersafteytemp>50)
+        {
+            Heatersafteytemp-=5;
+        }    
+    break;
+
+    case SecondaryFillSettings:
+       if(!secondaryyes)
+            {
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">");
+                secondaryyes=1;
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(11,1);
+                lcd.print(">");
+                secondaryyes=0;
+            }
+    break;
+
+    case FactoryResetScreen:
+       if(!factoryresetflag)
+            {
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">");
+                factoryresetflag=1;
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(11,1);
+                lcd.print(">");
+                factoryresetflag=0;
+            }
+    break;
+
+    case SolenoidControlSettings:
+            if(!solenoidoverride)
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> OVERRIDE");
+                solenoidoverride=1;
+            }
+            else
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> ACTIVE     ");
+                solenoidoverride=0;
+            }
+        break;
+
+    case FlowControlSettings:
+        if(!flowoverride)
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> OVERRIDE");
+                flowoverride=1;
+            }
+            else
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> ACTIVE     ");
+                flowoverride=0;
+            }
+    break;
+
+    case TempSensorSettings:
+            if(!probeoverride)
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> OVERRIDE");
+                probeoverride=1;
+            }
+            else
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> ACTIVE     ");
+                probeoverride=0;
+            }
+        break;
+
+        case LevelSensorSettings:
+            if(!leveloverride)
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> OVERRIDE");
+                leveloverride=1;
+            }
+            else
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> ACTIVE     ");
+                leveloverride=0;
+            }
+        break;
+
+    case CalibrationSettings:
+        if(calibration_value>0.0)
+        {
+        calibration_value-=0.1;
+        }
+    break;
+
+
+//  **************** User Settings *******************
+
+case UserSettingsScreen4:
+        if(downpointer)
+        {
+            if(dduflag)
+            {
+                screen=UserSettingsScreen1;
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                downpointer=0;
+                uppointer=1;
+            }
+            else
+            {
+                screen=UserSettingsScreen2;
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                downpointer=0;
+                uppointer=1;
+            } 
+       
+        }
+        else
+        {
+        lcd.clear();
+        lcd.setCursor(0,1);
+        lcd.print(">");
+        downpointer=1;
+        uppointer=0;
+        }
+        
+    break;
+
+    case UserSettingsScreen3:
+        if(downpointer)
+        {
+            if(dduflag)
+            {
+                screen=UserSettingsScreen4;
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">");
+                downpointer=1;
+                uppointer=0;
+            }
+            else
+            {
+                screen=UserSettingsScreen2;
+                lcd.clear();
+                lcd.setCursor(0,0);
+                lcd.print(">");
+                downpointer=0;
+                uppointer=1;
+            }   
+        }
+        else
+        {
+        lcd.clear();
+        lcd.setCursor(0,1);
+        lcd.print(">");
+        downpointer=1;
+        uppointer=0;
+        }
+        
+    break;
+
+    case UserSettingsScreen2:
+        
+             if(downpointer)
+            {
+                screen=UserSettingsScreen3;
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">");
+                downpointer=1;
+                uppointer=0;   
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">");
+                downpointer=1;
+                uppointer=0;
+            }
+
+        
+        
+    break;
+
+    case UserSettingsScreen1:
+        if(downpointer)
+        {
+            screen=UserSettingsScreen2;
+            lcd.clear();
+            lcd.setCursor(0,1);
+            lcd.print(">");
+            downpointer=1;
+            uppointer=0;   
+        }
+        else
+        {
+        lcd.clear();
+        lcd.setCursor(0,1);
+        lcd.print(">");
+        downpointer=1;
+        uppointer=0;
+        }
+        
+    break;
+
+    case ServiceMenuScreen1:
+        if(downpointer)
+        {
+            screen=ServiceMenuScreen2;
+            lcd.clear();
+            lcd.setCursor(0,1);
+            lcd.print(">");
+            downpointer=1;
+            uppointer=0;   
+        }
+        else
+        {
+        lcd.clear();
+        lcd.setCursor(0,1);
+        lcd.print(">");
+        downpointer=1;
+        uppointer=0;
+        }
+        
+    break;
+
+    case ServiceMenuScreen2:
+        if(dduflag)
+        {
+            if(downpointer)
+            {
+                screen=ServiceMenuScreen3;
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">");
+                downpointer=1;
+                uppointer=0;   
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">");
+                downpointer=1;
+                uppointer=0;
+            }
+        }
+        else
+        {
+            if(downpointer)
+            {
+                screen=SDUServiceMenuScreen3;
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">");
+                downpointer=1;
+                uppointer=0;   
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">");
+                downpointer=1;
+                uppointer=0;
+            }
+        }
+    break;
+    case ServiceMenuScreen3:
+        if(downpointer)
+        {
+            screen=ServiceMenuScreen4;
+            lcd.clear();
+            lcd.setCursor(0,1);
+            lcd.print(">");
+            downpointer=1;
+            uppointer=0;   
+        }
+        else
+        {
+        lcd.clear();
+        lcd.setCursor(0,1);
+        lcd.print(">");
+        downpointer=1;
+        uppointer=0;
+        }
+        
+    break;
+
+    case ServiceMenuScreen4:
+        if(downpointer)
+        {
+            screen=ServiceMenuScreen5;
+            lcd.clear();
+            lcd.setCursor(0,1);
+            lcd.print(">");
+            downpointer=1;
+            uppointer=0;   
+        }
+        else
+        {
+        lcd.clear();
+        lcd.setCursor(0,1);
+        lcd.print(">");
+        downpointer=1;
+        uppointer=0;
+        }
+        
+    break;
+
+    case ServiceMenuScreen5:
+        if(downpointer)
+        {
+            screen=ServiceMenuScreen1;
+            lcd.clear();
+            lcd.setCursor(0,0);
+            lcd.print(">");
+            downpointer=0;
+            uppointer=1;   
+        }
+        else
+        {
+        lcd.clear();
+        lcd.setCursor(0,1);
+        lcd.print(">");
+        downpointer=1;
+        uppointer=0;
+        }
+        
+    break;
+
+    case SDUServiceMenuScreen3:
+        if(downpointer)
+        {
+            screen=ServiceMenuScreen1;
+            lcd.clear();
+            lcd.setCursor(0,0);
+            lcd.print(">");
+            downpointer=0;
+            uppointer=1;    
+        }
+        else
+        {
+        lcd.clear();
+        lcd.setCursor(0,1);
+        lcd.print(">");
+        downpointer=1;
+        uppointer=0;
+        }
+        
+    break;
+
+
+
+
+
+    // case UserSettingsScreen8:
+    //     if(downpointer)
+    //     {
+    //         screen=UserSettingsScreen1;
+    //         lcd.clear();
+    //         lcd.setCursor(0,0);
+    //         lcd.print(">");
+    //         downpointer=0;
+    //         uppointer=1;   
+    //     }
+    //     else
+    //     {
+    //     lcd.clear();
+    //     lcd.setCursor(0,1);
+    //     lcd.print(">");
+    //     downpointer=1;
+    //     uppointer=0;
+    //     }
+        
+    // break;
+
+    // case UserSettingsScreen7:
+    //     if(downpointer)
+    //     {
+    //         screen=UserSettingsScreen8;
+    //         lcd.clear();
+    //         lcd.setCursor(0,1);
+    //         lcd.print(">");
+    //         downpointer=1;
+    //         uppointer=0;   
+    //     }
+    //     else
+    //     {
+    //     lcd.clear();
+    //     lcd.setCursor(0,1);
+    //     lcd.print(">");
+    //     downpointer=1;
+    //     uppointer=0;
+    //     }
+    // break;
+
+    // case UserSettingsScreen6:
+    //     if(downpointer)
+    //     {
+    //         screen=UserSettingsScreen7;
+    //         lcd.clear();
+    //         lcd.setCursor(0,1);
+    //         lcd.print(">");
+    //         downpointer=1;
+    //         uppointer=0;   
+    //     }
+    //     else
+    //     {
+    //     lcd.clear();
+    //     lcd.setCursor(0,1);
+    //     lcd.print(">");
+    //     downpointer=1;
+    //     uppointer=0;
+    //     }
+    // break;
+
+    // case UserSettingsScreen5:
+    //     if(downpointer)
+    //     {
+    //         screen=UserSettingsScreen6;
+    //         lcd.clear();
+    //         lcd.setCursor(0,1);
+    //         lcd.print(">");
+    //         downpointer=1;
+    //         uppointer=0;   
+    //     }
+    //     else
+    //     {
+    //     lcd.clear();
+    //     lcd.setCursor(0,1);
+    //     lcd.print(">");
+    //     downpointer=1;
+    //     uppointer=0;
+    //     }
+    // break;
+
+    // case UserSettingsScreen4:
+    //     if(dduflag)
+    //     {
+    //         if(downpointer)
+    //         {
+    //             lcd.clear();
+    //             screen=UserSettingsScreen5;
+            
+    //             lcd.setCursor(0,1);
+    //             lcd.print(">");
+    //             uppointer=0;
+    //             downpointer=1;   
+    //         }
+    //         else
+    //         {
+    //             lcd.clear();
+    //             lcd.setCursor(0,1);
+    //             lcd.print(">");
+    //             uppointer=0;
+    //             downpointer=1;
+    //         }
+    //     }
+    //     else
+    //     {
+    //          if(downpointer)
+    //         {
+    //             lcd.clear();
+    //             screen=SDUUserSettingsScreen5;
+            
+    //             lcd.setCursor(0,1);
+    //             lcd.print(">");
+    //             uppointer=0;
+    //             downpointer=1;   
+    //         }
+    //         else
+    //         {
+    //             lcd.clear();
+    //             lcd.setCursor(0,1);
+    //             lcd.print(">");
+    //             uppointer=0;
+    //             downpointer=1;
+    //         }
+
+    //     }
+    // break;
+
+    // case UserSettingsScreen3:
+    //     if(downpointer)
+    //     {
+    //         screen=UserSettingsScreen4;
+    //         lcd.clear();
+    //         lcd.setCursor(0,1);
+    //         lcd.print(">");
+    //         downpointer=1;
+    //         uppointer=0;   
+    //     }
+    //     else
+    //     {
+    //         lcd.clear();
+    //         lcd.setCursor(0,1);
+    //         lcd.print(">");
+    //         downpointer=1;
+    //         uppointer=0;
+    //     }
+    // break;
+
+    // case UserSettingsScreen2:
+    //      if(downpointer)
+    //     {
+    //         screen=UserSettingsScreen3;
+    //         lcd.clear();
+    //         lcd.setCursor(0,1);
+    //         lcd.print(">");
+    //         downpointer=1;
+    //         uppointer=0;
+    //     }
+    //     else
+    //     {
+    //        lcd.clear();
+    //        lcd.setCursor(0,1);
+    //        lcd.print(">");
+    //        downpointer=1;
+    //        uppointer=0; 
+    //     }
+    // break;
+
+    // case UserSettingsScreen1:
+    //     if(downpointer)
+    //     {
+    //         screen=UserSettingsScreen2;
+    //         lcd.clear();
+    //         lcd.setCursor(0,1);
+    //         lcd.print(">");
+    //         downpointer=1;
+            
+    //     }
+    //     else
+    //     {
+    //         lcd.clear();
+    //         lcd.setCursor(0,1);
+    //         lcd.print(">");
+    //         downpointer=1;
+    //         uppointer=0;
+    //     }
+    // break;
+
+    // case SDUUserSettingsScreen5:
+    //     if(downpointer)
+    //     {
+    //         screen=UserSettingsScreen1;
+    //         lcd.clear();
+    //         lcd.setCursor(0,0);
+    //         lcd.print(">");
+    //         uppointer=1;
+            
+    //     }
+    //     else
+    //     {
+    //         lcd.clear();
+    //         lcd.setCursor(0,1);
+    //         lcd.print(">");
+    //         downpointer=1;
+    //         uppointer=0;
+    //     }
+        
+    // break;
+
+    case OperatingTimeSettings:
+            if(optimecounter>0){
+            optimecounter--;
+            }
+            else{
+                optimecounter=3;
+            }
+    break;
+
+    case SubProductTypeSettings:
+            if(prodtypecounter>0){
+            prodtypecounter--;
+            }
+            else{
+                prodtypecounter=2;
+            }
+    break;
+
+    case ProductTypeSettings:
+            // lcd.clear();
+            // lcd.setCursor(11,1);
+            // lcd.print(">DDU    ");
+            // dduflag=1;
+            if(!dduflag)
+            {
+                lcd.clear();
+                lcd.setCursor(11,1);
+                lcd.print(">DDU");
+                dduflag=1;
+            }
+            else
+            {
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">SDU     ");
+                dduflag=0;
+            }
+    break;
+  }
+}
+
+void buttonClass:: user_settings()
+{
+   
+    if(!usersettings && !process_flag  && !servicemenu && !secondarytimerflag){
+      lcd.clear();
+      if(dduflag)
+      {
+      screen=UserSettingsScreen1;
+      }
+      else
+      {
+        screen=UserSettingsScreen2;
+      }
+      usersettings=1;
+      digitalWrite(BUZZER,HIGH);
+      buzzerclass_object.Buzzer_beep(1000);
+      buzzerclass_object.Buzzer_start();
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print(">");
+      uppointer=1;
+    }
+
+    if(secondarytimerflag && !time_skip)
+    {
+        skip_count++;
+        if (skip_count>=50)
+        {
+            one_second_counter=pre_end_time-5;
+            skip_count=0;
+            time_skip=1;
+
+        }
+    }
+    else
+    {
+        skip_count=0;
+    }
+
+   
+}
+
+void buttonClass:: back_screen()
+{
+    if((usersettings || servicemenu) && !inmenu){
+        lcd.clear();
+        eeprom_object.eeprom_datawrite();
+        screen=MainScreen;
+        mainscreenflag=1;
+        usersettings=0;
+        servicemenu=0;
+        uppointer=0;
+        downpointer=0;
+    }
+
+    if(inmenu)
+    {
+        lcd.clear();
+        usersettings=1;
+        servicemenu=1;
+        uppointer=1;
+        downpointer=0;
+        lcd.setCursor(0,0);
+        lcd.print(">");
+        inmenu=0;
+
+        switch(screen)
+        {
+            
+            case FlowControlSettings:
+                screen=UserSettingsScreen2;
+            break;
+
+            // case LevelSensorSettings:
+            //     screen=UserSettingsScreen3;
+            // break;
+
+            // case TempSensorSettings:
+            //     screen=UserSettingsScreen4;
+            // break;
+
+            case LevelSensorSettings:
+                 
+                    screen=UserSettingsScreen3;
+                
+            break;
+
+            case TempSensorSettings:
+                lcd.clear();
+                uppointer=0;
+                downpointer=1;
+                lcd.setCursor(0,1);
+                lcd.print(">");
+                screen=UserSettingsScreen4;
+
+            break;
+
+            case SolenoidControlSettings:
+                if(dduflag)
+                {
+                    screen=UserSettingsScreen4;
+                }
+                else
+                {
+                    lcd.clear();
+                    uppointer=0;
+                    downpointer=1;
+                    lcd.setCursor(0,1);
+                    lcd.print(">");
+                    screen=UserSettingsScreen3;
+                }
+            break;
+
+            case ProductTypeSettings:
+                screen=ServiceMenuScreen1;
+            break;
+
+            // case OperatingTimeSettings:
+            //     screen=UserSettingsScreen6;
+            // break;
+
+            case CalibrationSettings:
+                if(dduflag)
+                {
+                    screen=ServiceMenuScreen3;
+                }
+                else
+                {
+                    // lcd.clear();
+                    // lcd.setCursor(0,1);
+                    // lcd.print(">");
+                    screen=SDUServiceMenuScreen3;
+                   
+                }
+                
+            break;
+
+            case SecondaryFillSettings:
+                screen=UserSettingsScreen1;
+            break;
+
+            case SafteyTemperatureSettings:
+                screen=ServiceMenuScreen4;
+            break;
+
+            case ProbeCalibrationSettings:
+                screen=ServiceMenuScreen5;
+            break;
+
+            case SubProductTypeSettings:
+                screen=ServiceMenuScreen2;
+            break;
+
+            case FactoryResetScreen:
+                lcd.clear();
+                uppointer=0;
+                downpointer=1;
+                lcd.setCursor(0,1);
+                lcd.print(">");
+               if(dduflag)
+               {
+                screen=ServiceMenuScreen5;
+               }
+               else
+               {
+                screen=SDUServiceMenuScreen3;
+               }
+            break;
+        }
+        return;
+    }
+
+
+
+    
+    // if(inmenu)
+    // {
+    //     lcd.clear();
+    //     screen=UserSettingsScreen1;
+    //     inmenu=0;
+    //     lcd.setCursor(0,0);
+    //     lcd.print(">");
+    //     uppointer=1;
+    //     downpointer=0;
+    // }
+}
+
+void buttonClass::enter_function()
+{
+    if(error_check_flag && closetap)
+    {
+        lcd.clear();
+        error_check_flag=0;
+        closetap=0;
+    }
+
+    if(mainscreenflag)
+    {
+        process_object.variant_settings();
+        // lcd.clear();
+        Serial3.println("BUZZZZZZZZZZZER");
+        digitalWrite(BUZZER,HIGH);
+        // delay(500);
+        buzzerclass_object.Buzzer_beep(1000);
+        buzzerclass_object.Buzzer_start();
+
+        // process_object.error_check();
+        // if(error_check_flag)
+        // {
+        //     return;
+        // }
+        
+        // screen=ProcessScreen;
+        //     process_flag=1;
+        //     mainscreenflag=0;
+        //     one_second_counter=0;
+        //     pauseflag=0;
+        //     error_check_flag=0;
+        //     flow_error_checkflag=0;
+
+        if(secondaryyes && dduflag)
+        {
+            
+            // Serial3.println("Secondary Fill");
+            screen=SecondaryFillTimer;
+            mainscreenflag=0;
+            one_second_counter=0;
+            secondarytimerflag=1;
+            pauseflag=0;
+            error_check_flag=0;
+            process_object.heater1_start();
+            // flow_error_checkflag=0;
+        }
+        else
+        {
+            screen=ProcessScreen;
+            process_flag=1;
+            mainscreenflag=0;
+            one_second_counter=0;
+            pauseflag=0;
+            error_check_flag=0;
+            process_object.error_check();
+            if(error_check_flag)
+            {
+                return;
+            }
+            process_object.heater1_start();
+            if(dduflag){
+            buzzerclass_object.heater_start();
+            }
+            // flow_error_checkflag=0;
+            // TCA0.SINGLE.INTFLAGS = TCA_SINGLE_OVF_bm;
+        }
+    }
+    // if(  screen==FactoryResetScreen )
+    // {
+    //     lcd.clear();
+    //     screen=UserSettingsScreen1;
+    //     usersettings=1;
+    //     uppointer=1;
+    //     downpointer=0;
+    //     lcd.setCursor(0,0);
+    //     lcd.print(">");
+    //     inmenu=0;
+    //     return;
+    // }
+
+    // if(inmenu)
+    // {
+    //     lcd.clear();
+    //     usersettings=1;
+    //     uppointer=1;
+    //     downpointer=0;
+    //     lcd.setCursor(0,0);
+    //     lcd.print(">");
+    //     inmenu=0;
+
+    //     switch(screen)
+    //     {
+    //         case FlowControlSettings:
+    //             if(dduflag)
+    //             {
+    //                 screen=UserSettingsScreen5;
+    //             }
+    //             else
+    //             {
+    //                 screen=SDUUserSettingsScreen5;
+    //             }
+    //         break;
+
+    //         case SolenoidControlSettings:
+    //             screen=UserSettingsScreen4;
+    //         break;
+
+    //         case ProductTypeSettings:
+    //             screen=UserSettingsScreen1;
+    //         break;
+
+    //         case OperatingTimeSettings:
+    //             screen=UserSettingsScreen6;
+    //         break;
+
+    //         case CalibrationSettings:
+    //             screen=UserSettingsScreen3;
+                
+    //         break;
+
+    //         case SecondaryFillSettings:
+    //             screen=UserSettingsScreen6;
+    //         break;
+
+    //         case SafteyTemperatureSettings:
+    //             screen=UserSettingsScreen7;
+    //         break;
+
+    //         case ProbeCalibrationSettings:
+    //             screen=UserSettingsScreen8;
+    //         break;
+
+    //         case SubProductTypeSettings:
+    //             screen=UserSettingsScreen2;
+    //         break;
+
+    //         case FactoryResetScreen:
+    //             lcd.setCursor(0,0);
+    //             lcd.print(" FACTORY RESET");
+    //             lcd.setCursor(5,1);
+    //             lcd.print(" DONE"); 
+    //             digitalWrite(BUZZER,HIGH);
+                
+    //             //  lcd.print(">");
+    //             if(factoryresetflag)
+    //             {
+    //                 eeprom_object.eeprom_defaultvalue();
+
+    //             }
+    //             delay(2000);
+    //             digitalWrite(BUZZER,LOW);
+
+    //             // buzzerclass_object.Buzzer_beep(1000);
+    //             // buzzerclass_object.Buzzer_start();
+
+    //             uppointer=1;
+    //             downpointer=0;
+    //             usersettings=0;
+    //             // lcd.setCursor(0,0);
+    //             // lcd.print(" ");
+    //             // lcd.setCursor(0,0);
+    //             // lcd.print(">");
+    //             lcd.clear();
+    //             screen=MainScreen;
+    //         break;
+    //     }
+    //     return;
+    // }
+        if(inmenu)
+    {
+        lcd.clear();
+        usersettings=1;
+        uppointer=1;
+        downpointer=0;
+        lcd.setCursor(0,0);
+        lcd.print(">");
+        inmenu=0;
+
+        switch(screen)
+        {
+            case FlowControlSettings:
+                screen=UserSettingsScreen2;
+            break;
+
+            case LevelSensorSettings:
+
+                screen=UserSettingsScreen3;
+                
+                    // lcd.clear();
+                    // lcd.setCursor(0,1);
+                    // lcd.print(">");
+
+                   
+                
+            break;
+
+            case TempSensorSettings:
+                screen=UserSettingsScreen4;
+                lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print(">");
+                uppointer=0;
+                downpointer=1;
+                
+            break;
+
+            case SolenoidControlSettings:
+                if(dduflag)
+                {
+                    screen=UserSettingsScreen4;
+                }
+                else
+                {
+                    screen=UserSettingsScreen3;
+                    lcd.clear();
+                    lcd.setCursor(0,1);
+                    lcd.print(">");
+                    uppointer=0;
+                    downpointer=1;
+                }
+                
+            break;
+
+            case ProductTypeSettings:
+                screen=ServiceMenuScreen1;
+            break;
+
+            // case OperatingTimeSettings:
+            //     screen=UserSettingsScreen6;
+            // break;
+
+            case CalibrationSettings:
+                if(dduflag)
+                {
+                    screen=ServiceMenuScreen3;
+                }
+                else
+                {
+                    screen=SDUServiceMenuScreen3;
+                   
+                }
+                
+            break;
+
+            case SecondaryFillSettings:
+                screen=UserSettingsScreen1;
+            break;
+
+            case SafteyTemperatureSettings:
+                screen=ServiceMenuScreen4;
+            break;
+
+            case ProbeCalibrationSettings:
+                screen=ServiceMenuScreen5;
+            break;
+
+            case SubProductTypeSettings:
+                screen=ServiceMenuScreen2;
+            break;
+
+            case FactoryResetScreen:
+                // lcd.setCursor(0,0);
+                // lcd.print(" FACTORY RESET");
+                // lcd.setCursor(5,1);
+                // lcd.print(" DONE"); 
+                // digitalWrite(BUZZER,HIGH);
+                
+                //  lcd.print(">");
+                if(factoryresetflag)
+                {
+                    lcd.setCursor(0,0);
+                    lcd.print(" FACTORY RESET");
+                    lcd.setCursor(5,1);
+                    lcd.print(" DONE"); 
+                    digitalWrite(BUZZER,HIGH);
+                    eeprom_object.eeprom_defaultvalue();
+
+                    delay(2000);
+                    digitalWrite(BUZZER,LOW);
+                    uppointer=1;
+                    downpointer=0;
+                    // usersettings=0;
+                    servicemenu=0;
+                    lcd.clear();
+                    screen=MainScreen;
+
+                }
+                else
+                {
+                    uppointer=0;
+                    downpointer=1;
+                    if(dduflag)
+                    {
+                        lcd.clear();
+                        lcd.setCursor(0,1);
+                        lcd.print(">");
+                        screen=ServiceMenuScreen5;
+
+                    }
+                    else
+                    {
+                        lcd.clear();
+                        lcd.setCursor(0,1);
+                        lcd.print(">");
+                        screen=SDUServiceMenuScreen3;
+
+                    }
+                   
+                }
+                // delay(2000);
+                // digitalWrite(BUZZER,LOW);
+
+                // buzzerclass_object.Buzzer_beep(1000);
+                // buzzerclass_object.Buzzer_start();
+
+                // uppointer=1;
+                // downpointer=0;
+                // usersettings=0;
+                // lcd.setCursor(0,0);
+                // lcd.print(" ");
+                // lcd.setCursor(0,0);
+                // lcd.print(">");
+                // lcd.clear();
+                // screen=MainScreen;
+            break;
+        }
+        return;
+    }
+
+
+
+    // if(screen==SecondaryFillSettings)
+    // {
+    //      if(secondaryyes)
+    //     {
+    //         process_object.variant_settings();
+    //         // Serial3.println("Secondary Fill");
+    //         screen=SecondaryFillTimer;
+    //         mainscreenflag=0;
+    //         one_second_counter=0;
+    //         secondarytimerflag=1;
+    //         pauseflag=0;
+    //         error_check_flag=0;
+    //         flow_error_checkflag=0;
+    //         usersettings=1;
+    //         inmenu=0;
+    //     }
+
+    // }
+
+    if(servicemenu && !inmenu)
+    {
+        switch(screen)
+        {
+            case ServiceMenuScreen1:
+                if(uppointer)
+                {
+                    lcd.clear();
+                    screen=ProductTypeSettings;
+                    inmenu=1;
+                    if(dduflag)
+                    {
+                        lcd.setCursor(11,1);
+                        lcd.print(">");
+                    }
+                    else
+                    {
+                        lcd.setCursor(0,1);
+                        lcd.print(">");  
+                    }
+                }
+                else
+                {
+                    lcd.clear();
+                    screen=SubProductTypeSettings;
+                    inmenu=1;
+                }
+
+            break;
+
+            case ServiceMenuScreen2:
+                if(downpointer)
+                {
+                    screen=CalibrationSettings;
+                    lcd.clear();
+                    inmenu=1;
+                }
+                else
+                {
+                    lcd.clear();
+                    screen=SubProductTypeSettings;
+                    inmenu=1;
+                }
+            break;
+
+            case ServiceMenuScreen3:
+                if(downpointer)
+                {
+                    lcd.clear();
+                    screen=SafteyTemperatureSettings;
+                    inmenu=1;
+                }
+                else
+                {
+                    screen=CalibrationSettings;
+                    lcd.clear();
+                    inmenu=1;
+                }
+
+            break;
+
+            case ServiceMenuScreen4:
+                if(downpointer)
+                {
+                    lcd.clear();
+                    screen=ProbeCalibrationSettings;
+                    inmenu=1;
+                }
+                else
+                {
+                    lcd.clear();
+                    screen=SafteyTemperatureSettings;
+                    inmenu=1;
+                }
+
+            break;
+
+            case ServiceMenuScreen5:
+                if(downpointer)
+                {
+                    lcd.clear();
+                    factoryresetflag=1;
+                    screen=FactoryResetScreen;
+                    inmenu=1;
+                    lcd.setCursor(0,1);
+                    lcd.print(">"); 
+                }
+                else
+                {
+                    lcd.clear();
+                    screen=ProbeCalibrationSettings;
+                    inmenu=1;
+                }
+
+            break;
+
+            case SDUServiceMenuScreen3:
+                if(downpointer)
+                {
+                    lcd.clear();
+                    screen=FactoryResetScreen;
+                    factoryresetflag=1;
+                    inmenu=1;
+                    lcd.setCursor(0,1);
+                    lcd.print(">"); ;
+                }
+                else
+                {
+                    screen=CalibrationSettings;
+                    lcd.clear();
+                    inmenu=1;
+                }
+
+            break;
+        }
+    } 
+
+    if(usersettings && !inmenu)
+    {
+        switch(screen)
+        {
+            case UserSettingsScreen1:
+                if(uppointer)
+                {
+                //    lcd.clear();
+                //     screen=SolenoidControlSettings;
+                //     if(solenoidoverride)
+                //     {
+                //         lcd.setCursor(0,1);
+                //         lcd.print("> OVERRIDE"); 
+                //     }
+                //     else
+                //     {
+                //     lcd.setCursor(0,1);
+                //     lcd.print("> ACTIVE   ");
+                //     }
+                //     inmenu=1;
+                    lcd.clear();
+                    screen=SecondaryFillSettings;
+                    inmenu=1;
+                    if(secondaryyes)
+                    {
+                        lcd.setCursor(0,1);
+                        lcd.print(">");
+                    }
+                    else
+                    {
+                        lcd.setCursor(11,1);
+                        lcd.print(">");  
+                    }
+                }
+                else
+                {
+                    lcd.clear();
+                    screen=FlowControlSettings;
+                    if(flowoverride)
+                    {
+                        lcd.setCursor(0,1);
+                        lcd.print("> OVERRIDE"); 
+                    }
+                    else
+                    {
+                    lcd.setCursor(0,1);
+                    lcd.print("> ACTIVE   ");
+                    }
+                    inmenu=1;
+                }
+            break;
+
+            case UserSettingsScreen2:
+                if(downpointer)
+                {
+                    screen=LevelSensorSettings;
+                    lcd.clear();
+                     if(leveloverride)
+                    {
+                        lcd.setCursor(0,1);
+                        lcd.print("> OVERRIDE"); 
+                    }
+                    else
+                    {
+                    lcd.setCursor(0,1);
+                    lcd.print("> ACTIVE   ");
+                    }
+                    inmenu=1;
+                }
+                else
+                {
+                    lcd.clear();
+                    screen=FlowControlSettings;
+                    if(flowoverride)
+                    {
+                        lcd.setCursor(0,1);
+                        lcd.print("> OVERRIDE"); 
+                    }
+                    else
+                    {
+                    lcd.setCursor(0,1);
+                    lcd.print("> ACTIVE   ");
+                    }
+                    inmenu=1;
+
+                }
+            break;
+
+             case UserSettingsScreen3:
+                if(downpointer)
+                {
+                    // screen=TempSensorSettings;
+                    // lcd.clear();
+                    //  if(probeoverride)
+                    // {
+                    //     lcd.setCursor(0,1);
+                    //     lcd.print("> OVERRIDE"); 
+                    // }
+                    // else
+                    // {
+                    // lcd.setCursor(0,1);
+                    // lcd.print("> ACTIVE   ");
+                    // }
+                    // inmenu=1;
+
+                    lcd.clear();
+                    screen=SolenoidControlSettings;
+                    if(solenoidoverride)
+                    {
+                        lcd.setCursor(0,1);
+                        lcd.print("> OVERRIDE"); 
+                    }
+                    else
+                    {
+                    lcd.setCursor(0,1);
+                    lcd.print("> ACTIVE   ");
+                    }
+                    inmenu=1;
+
+                }
+                else
+                {
+                   screen=LevelSensorSettings;
+                    lcd.clear();
+                     if(leveloverride)
+                    {
+                        lcd.setCursor(0,1);
+                        lcd.print("> OVERRIDE"); 
+                    }
+                    else
+                    {
+                    lcd.setCursor(0,1);
+                    lcd.print("> ACTIVE   ");
+                    }
+                    inmenu=1;
+
+                }
+            break;
+
+            case UserSettingsScreen4:
+                if(downpointer)
+                {
+                    // lcd.clear();
+                    // screen=SecondaryFillSettings;
+                    // inmenu=1;
+                    // if(secondaryyes)
+                    // {
+                    //     lcd.setCursor(0,1);
+                    //     lcd.print(">");
+                    // }
+                    // else
+                    // {
+                    //     lcd.setCursor(11,1);
+                    //     lcd.print(">");  
+                    // }
+
+                    screen=TempSensorSettings;
+                    lcd.clear();
+                     if(probeoverride)
+                    {
+                        lcd.setCursor(0,1);
+                        lcd.print("> OVERRIDE"); 
+                    }
+                    else
+                    {
+                    lcd.setCursor(0,1);
+                    lcd.print("> ACTIVE   ");
+                    }
+                    inmenu=1;
+                }
+                else
+                {
+                //   screen=TempSensorSettings;
+                //     lcd.clear();
+                //      if(probeoverride)
+                //     {
+                //         lcd.setCursor(0,1);
+                //         lcd.print("> OVERRIDE"); 
+                //     }
+                //     else
+                //     {
+                //     lcd.setCursor(0,1);
+                //     lcd.print("> ACTIVE   ");
+                //     }
+                //     inmenu=1;
+                    lcd.clear();
+                    screen=SolenoidControlSettings;
+                    if(solenoidoverride)
+                    {
+                        lcd.setCursor(0,1);
+                        lcd.print("> OVERRIDE"); 
+                    }
+                    else
+                    {
+                    lcd.setCursor(0,1);
+                    lcd.print("> ACTIVE   ");
+                    }
+                    inmenu=1;
+
+                }
+            break;
+
+            }
+        }
+    // if(usersettings && !inmenu)
+    // {
+    //     switch(screen)
+    //     {
+    //         case UserSettingsScreen1:
+    //             if(uppointer)
+    //             {
+    //                 lcd.clear();
+    //                 screen=ProductTypeSettings;
+    //                 inmenu=1;
+    //                 if(dduflag)
+    //                 {
+    //                     lcd.setCursor(11,1);
+    //                     lcd.print(">");
+    //                 }
+    //                 else
+    //                 {
+    //                     lcd.setCursor(0,1);
+    //                     lcd.print(">");  
+    //                 }
+    //             }
+    //             else
+    //             {
+    //                 lcd.clear();
+    //                 screen=SubProductTypeSettings;
+    //                 inmenu=1;
+    //             }
+    //         break;
+
+    //         case UserSettingsScreen2:
+    //             if(downpointer)
+    //             {
+    //                 screen=CalibrationSettings;
+    //                 lcd.clear();
+    //                 inmenu=1;
+    //             }
+    //             else
+    //             {
+    //                  lcd.clear();
+    //                 screen=SubProductTypeSettings;
+    //                 inmenu=1;
+
+    //             }
+    //         break;
+
+    //         case UserSettingsScreen3:
+            
+    //             if(downpointer)
+    //             {
+    //                 lcd.clear();
+    //                 screen=SolenoidControlSettings;
+    //                 if(solenoidoverride)
+    //                 {
+    //                     lcd.setCursor(0,1);
+    //                     lcd.print("> OVERRIDE"); 
+    //                 }
+    //                 else
+    //                 {
+    //                 lcd.setCursor(0,1);
+    //                 lcd.print("> ACTIVE   ");
+    //                 }
+    //                 inmenu=1;
+    //             }
+    //             else
+    //             {
+    //                 screen=CalibrationSettings;
+    //                 lcd.clear();
+    //                 inmenu=1;
+                   
+    //             }
+    //         break;
+
+    //         case UserSettingsScreen4:
+    //             if(downpointer)
+    //             {
+    //                 lcd.clear();
+    //                 screen=FlowControlSettings;
+    //                 if(flowoverride)
+    //                 {
+    //                     lcd.setCursor(0,1);
+    //                     lcd.print("> OVERRIDE"); 
+    //                 }
+    //                 else
+    //                 {
+    //                 lcd.setCursor(0,1);
+    //                 lcd.print("> ACTIVE   ");
+    //                 }
+    //                 inmenu=1;
+
+    //             }
+    //             else
+    //             {
+    //                 lcd.clear();
+    //                 screen=SolenoidControlSettings;
+    //                 if(solenoidoverride)
+    //                 {
+    //                     lcd.setCursor(0,1);
+    //                     lcd.print("> OVERRIDE"); 
+    //                 }
+    //                 else
+    //                 {
+    //                 lcd.setCursor(0,1);
+    //                 lcd.print("> ACTIVE   ");
+    //                 }
+    //                 inmenu=1;
+    //             }
+    //         break;
+
+    //         case UserSettingsScreen5:
+    //             if(downpointer)
+    //             {
+    //                 lcd.clear();
+    //                 screen=SecondaryFillSettings;
+    //                 inmenu=1;
+    //                 if(secondaryyes)
+    //                 {
+    //                     lcd.setCursor(0,1);
+    //                     lcd.print(">");
+    //                 }
+    //                 else
+    //                 {
+    //                     lcd.setCursor(11,1);
+    //                     lcd.print(">");  
+    //                 }
+
+    //             }
+    //             else
+    //             {lcd.clear();
+    //                 screen=FlowControlSettings;
+    //                 if(flowoverride)
+    //                 {
+    //                     lcd.setCursor(0,1);
+    //                     lcd.print("> OVERRIDE"); 
+    //                 }
+    //                 else
+    //                 {
+    //                 lcd.setCursor(0,1);
+    //                 lcd.print("> ACTIVE   ");
+    //                 }
+    //                 inmenu=1;
+    //             }
+    //         break;
+
+    //         case UserSettingsScreen6:
+    //             if(downpointer)
+    //             {
+    //                 lcd.clear();
+    //                 screen=SafteyTemperatureSettings;
+    //                 inmenu=1;
+
+    //             }
+    //             else
+    //             {
+    //                 lcd.clear();
+    //                 screen=SecondaryFillSettings;
+    //                 inmenu=1;
+    //                 if(secondaryyes)
+    //                 {
+    //                     lcd.setCursor(0,1);
+    //                     lcd.print(">");
+    //                 }
+    //                 else
+    //                 {
+    //                     lcd.setCursor(11,1);
+    //                     lcd.print(">");  
+    //                 }
+    //             }
+    //         break;
+
+    //         case UserSettingsScreen7:
+    //             if(downpointer)
+    //             {
+    //                 lcd.clear();
+    //                 screen=ProbeCalibrationSettings;
+    //                 inmenu=1;
+
+    //             }
+    //             else
+    //             {
+    //                 lcd.clear();
+    //                 screen=SafteyTemperatureSettings;
+    //                 inmenu=1;
+
+    //             }
+    //         break;
+
+    //         case UserSettingsScreen8:
+    //             if(downpointer)
+    //             {
+    //                 lcd.clear();
+    //                 screen=FactoryResetScreen;
+    //                 inmenu=1;
+    //                 lcd.setCursor(11,1);
+    //                 lcd.print(">"); 
+    //                 //  if(factoryresetflag)
+    //                 // {
+    //                 //     lcd.setCursor(0,1);
+    //                 //     lcd.print(">");
+    //                 // }
+    //                 // else
+    //                 // {
+    //                 //     lcd.setCursor(11,1);
+    //                 //     lcd.print(">");  
+    //                 // }
+    //             }
+    //             else
+    //             {
+    //                 lcd.clear();
+    //                 screen=ProbeCalibrationSettings;
+    //                 inmenu=1;
+
+    //             }
+    //         break;
+
+    //         case SDUUserSettingsScreen5:
+    //             if(downpointer)
+    //             {
+    //                 lcd.clear();
+    //                 screen=FactoryResetScreen;
+    //                 inmenu=1;
+    //                  if(factoryresetflag)
+    //                 {
+    //                     lcd.setCursor(11,1);
+    //                     lcd.print(">");
+    //                 }
+    //                 else
+    //                 {
+    //                     lcd.setCursor(0,1);
+    //                     lcd.print(">");  
+    //                 }
+
+    //             }
+    //             else
+    //             {
+    //                 lcd.clear();
+    //                 screen=FlowControlSettings;
+
+    //                  if(flowoverride)
+    //                 {
+    //                     lcd.setCursor(0,1);
+    //                     lcd.print("> OVERRIDE"); 
+    //                 }
+    //                 else
+    //                 {
+    //                 lcd.setCursor(0,1);
+    //                 lcd.print("> ACTIVE   ");
+    //                 }
+
+    //                 inmenu=1;
+
+    //             }
+    //         break;
+
+    //     }
+    //     // switch(screen)
+    //     // {
+    //     //     case UserSettingsScreen1:
+    //     //         if(!downpointer)
+    //     //         {
+    //     //             lcd.clear();
+    //     //             screen=SecondaryFillSettings;
+    //     //             inmenu=1;
+    //     //             if(secondaryyes)
+    //     //             {
+    //     //                 lcd.setCursor(0,1);
+    //     //                 lcd.print(">");
+    //     //             }
+    //     //             else
+    //     //             {
+    //     //                 lcd.setCursor(11,1);
+    //     //                 lcd.print(">");  
+    //     //             }
+    //     //         }
+    //     //         else
+    //     //         {
+    //     //             lcd.clear();
+    //     //             screen=SafteyTemperatureSettings;
+    //     //             inmenu=1;
+    //     //         }
+    //     //     break;
+
+    //     //     case UserSettingsScreen2:
+    //     //         if(downpointer)
+    //     //         {
+    //     //             screen=ProbeCalibrationSettings;
+    //     //             lcd.clear();
+    //     //             inmenu=1;
+    //     //         }
+    //     //         else
+    //     //         {
+    //     //             lcd.clear();
+    //     //             screen=SafteyTemperatureSettings;
+    //     //             inmenu=1;
+
+    //     //         }
+    //     //     break;
+
+    //     //     case UserSettingsScreen3:
+            
+    //     //         if(downpointer)
+    //     //         {
+    //     //             screen=CalibrationSettings;
+    //     //             lcd.clear();
+    //     //             inmenu=1;
+    //     //         }
+    //     //         else
+    //     //         {
+    //     //             lcd.clear();
+    //     //             screen=SafteyTemperatureSettings;
+    //     //             inmenu=1;
+
+    //     //         }
+    //     //     break;
+
+    //     //     case UserSettingsScreen4:
+    //     //         if(downpointer)
+    //     //         {
+    //     //             lcd.clear();
+    //     //             screen=ProductTypeSettings;
+    //     //             inmenu=1;
+
+    //     //         }
+    //     //         else
+    //     //         {
+    //     //             screen=CalibrationSettings;
+    //     //             lcd.clear();
+    //     //             inmenu=1;
+    //     //         }
+    //     //     break;
+
+    //     //     case UserSettingsScreen5:
+    //     //         if(downpointer)
+    //     //         {
+    //     //             lcd.clear();
+    //     //             screen=SolenoidControlSettings;
+    //     //             if(solenoidoverride)
+    //     //             {
+    //     //                 lcd.setCursor(0,1);
+    //     //                 lcd.print("> Override"); 
+    //     //             }
+    //     //             else
+    //     //             {
+    //     //             lcd.setCursor(0,1);
+    //     //             lcd.print("> Active   ");
+    //     //             }
+    //     //             inmenu=1;
+
+    //     //         }
+    //     //         else
+    //     //         {
+    //     //             lcd.clear();
+    //     //             screen=ProductTypeSettings;
+    //     //             inmenu=1;
+
+    //     //         }
+    //     //     break;
+
+    //     //     case UserSettingsScreen6:
+    //     //         if(downpointer)
+    //     //         {
+    //     //             lcd.clear();
+    //     //             screen=FlowControlSettings;
+    //     //             if(flowoverride)
+    //     //             {
+    //     //                 lcd.setCursor(0,1);
+    //     //                 lcd.print("> Override"); 
+    //     //             }
+    //     //             else
+    //     //             {
+    //     //             lcd.setCursor(0,1);
+    //     //             lcd.print("> Active   ");
+    //     //             }
+    //     //             inmenu=1;
+
+    //     //         }
+    //     //         else
+    //     //         {
+    //     //             lcd.clear();
+    //     //             screen=SolenoidControlSettings;
+    //     //             if(solenoidoverride)
+    //     //             {
+    //     //                 lcd.setCursor(0,1);
+    //     //                 lcd.print("> Override"); 
+    //     //             }
+    //     //             else
+    //     //             {
+    //     //             lcd.setCursor(0,1);
+    //     //             lcd.print("> Active   ");
+    //     //             }
+    //     //             inmenu=1;
+    //     //         }
+    //     //     break;
+
+    //     //     case UserSettingsScreen7:
+    //     //         if(downpointer)
+    //     //         {
+    //     //             lcd.clear();
+    //     //             screen=OperatingTimeSettings;
+    //     //             inmenu=1;
+
+    //     //         }
+    //     //         else
+    //     //         {
+    //     //             lcd.clear();
+    //     //             screen=FlowControlSettings;
+    //     //             if(flowoverride)
+    //     //             {
+    //     //                 lcd.setCursor(0,1);
+    //     //                 lcd.print("> Override"); 
+    //     //             }
+    //     //             else
+    //     //             {
+    //     //             lcd.setCursor(0,1);
+    //     //             lcd.print("> Active   ");
+    //     //             }
+    //     //             inmenu=1;
+    //     //         }
+    //     //     break;
+
+
+
+    //     // }
+        
+    // }
+}
+
+
+buttonClass buttonClass_object = buttonClass();

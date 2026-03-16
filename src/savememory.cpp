@@ -1,0 +1,62 @@
+#include <Arduino.h>
+#include "Ext_Var.h"
+
+#include <EEPROM.h>
+
+
+#define PRODUCT_SELECTION 0
+#define SUBPRODUCT_SELECTION 1
+#define SAFETY_TEMP 3
+#define CALIBRATION_VALUE 5
+#define PROBE_ERROR 9
+
+//----------DEFINATIONS
+
+eepromclass::eepromclass()
+{}
+
+void eepromclass::eeprom_defaultvalue()                 // Factory Reset Condition
+{
+    counter=0.0;
+    dduflag=0;
+    prodtypecounter=0;
+    calibration_value=0.0;
+    solenoidoverride=1;
+    flowoverride=0;
+    Heatersafteytemp=50;
+    eeprom_object.eeprom_datawrite();
+
+}
+
+void eepromclass:: eeprom_datawrite()
+{
+//   prodtypecounter=1;
+//   calibration_value=0.1;
+//   Heatersafteytemp=50;
+//      temp_error=0.0;
+    EEPROM.write(PRODUCT_SELECTION, dduflag);
+    
+    EEPROM.put(SUBPRODUCT_SELECTION,prodtypecounter);
+    
+    EEPROM.put(CALIBRATION_VALUE, calibration_value);
+    
+    EEPROM.put(SAFETY_TEMP, Heatersafteytemp);
+ 
+    EEPROM.put(PROBE_ERROR, temp_error);
+
+}
+
+void eepromclass :: eeprom_dataread()
+{
+    dduflag=EEPROM.read(PRODUCT_SELECTION);
+    EEPROM.get(SUBPRODUCT_SELECTION,prodtypecounter);
+    EEPROM.get(CALIBRATION_VALUE, calibration_value);
+    EEPROM.get(SAFETY_TEMP, Heatersafteytemp);
+    EEPROM.get(PROBE_ERROR, temp_error);
+
+    // Serial3.println(dduflag);
+    // Serial3.println(calibration_value);
+
+}
+
+eepromclass eeprom_object= eepromclass();
