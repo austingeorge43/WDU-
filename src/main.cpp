@@ -2,82 +2,84 @@
 // #include "Lcd_Display.h"
 #include "Ext_Var.h"
 
-#define SOLENOID1 13
-#define SOLENOID2 12
+#define SOLENOID1 13   // Solenoid valve 1 pin(Water inlet and primary comdenser)
+#define SOLENOID2 12   // Solenoid valve 2 pin(Secondary condenser)
 
-uint16_t time_counter=0;
-int one_second_counter=0;
+uint16_t time_counter=0;       // Counter for process timer
+int one_second_counter=0;      // Process elapsed time (seconds)
 
-uint16_t time_counter2=0;
-int one_second_counter2=0;
-bool pauseflag=0;
-# define PERIOD_EXAMPLE_VALUE (0x00C2)
+uint16_t time_counter2=0;      // Additional counter used for errors
+int one_second_counter2=0;     // Additional one second counter
 
+bool pauseflag=0;              // Pauses process timer
+
+# define PERIOD_EXAMPLE_VALUE (0x00C2)   // Timer period value
+
+
+/*================ System Initialization ================*/
 void setup() {
 
-  Serial3.begin(9600);
-  lcd_object.lcd_setup();
-  buttonClass_object.button_setup();
-  buzzerclass_object.buzzer_setup();
-  process_object.process_setup();
-  PT100_object.PT100_setup();
+  Serial3.begin(9600);                // Start serial communication
+  lcd_object.lcd_setup();             // Initialize LCD
+  buttonClass_object.button_setup();  // Initialize button module
+  buzzerclass_object.buzzer_setup();  // Initialize buzzer module
+  process_object.process_setup();     // Initialize process control
+  PT100_object.PT100_setup();         // Initialize PT100 sensor
   // digitalWrite(SOLENOID1,HIGH);
 
-  // eeprom_object.eeprom_datawrite();
+  // eeprom_object.eeprom_datawrite(); // Write default EEPROM data
   // delay(300);
-  eeprom_object.eeprom_dataread();
 
-  cli();
-  /* enable overflow interrupt */
-  TCA0.SINGLE.INTCTRL = TCA_SINGLE_OVF_bm;
+  eeprom_object.eeprom_dataread();    // Read saved EEPROM settings
 
-  /* set Normal mode */
-  TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_NORMAL_gc;
+  cli();                              // Disable interrupts during timer setup
 
-  /* disable event counting */
-  TCA0.SINGLE.EVCTRL &= ~(TCA_SINGLE_CNTEI_bm);
+  TCA0.SINGLE.INTCTRL = TCA_SINGLE_OVF_bm;                           // Enable timer overflow interrupt
+  TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_NORMAL_gc;                   // Set timer in normal mode
+  TCA0.SINGLE.EVCTRL &= ~(TCA_SINGLE_CNTEI_bm);                      // Disable event counting
+  TCA0.SINGLE.PER = PERIOD_EXAMPLE_VALUE;                            // Load timer period value
+  TCA0.SINGLE.CTRLA = TCA_SINGLE_CLKSEL_DIV1024_gc | TCA_SINGLE_ENABLE_bm; // Set clock prescaler and enable timer
 
-  /* set the period */
-  TCA0.SINGLE.PER = PERIOD_EXAMPLE_VALUE;
-
-  TCA0.SINGLE.CTRLA = TCA_SINGLE_CLKSEL_DIV1024_gc | TCA_SINGLE_ENABLE_bm;/* set clock source (sys_clk/256) */
-  /* start timer */
-  sei();
-
-  // put your setup code here, to run once:
-  
+  sei();                              // Enable global interrupts
 }
 
+
+/*================ Timer Overflow Interrupt ================*/
 ISR(TCA0_OVF_vect)
 {
-  time_counter2++;
-  if (time_counter2 >= 80) // 60 / 0.0124 ≈ 4839
-    {
-      one_second_counter2++;
-      time_counter2=0;
-    }
+  time_counter2++;                    // Increment Additional timer
 
-  if((process_flag || secondarytimerflag) && !pauseflag)
+  if (time_counter2 >= 80)            // Check if ~1 second elapsed
   {
-    time_counter++;
-    if (time_counter >= 80) // 60 / 0.0124 ≈ 4839
+    one_second_counter2++;            // Increment Additional timer seconds
+    time_counter2=0;                  // Reset additional counter
+  }
+
+  if((process_flag || secondarytimerflag) && !pauseflag) // Run timer when process active
+  {
+    time_counter++;                   // Increment process timer
+
+    if (time_counter >= 80)           // Check if ~1 second elapsed
     {
-      one_second_counter++;
-      Serial3.println(one_second_counter);
-      time_counter=0;
+      one_second_counter++;           // Increment process seconds
+      Serial3.println(one_second_counter); // Debug print
+      time_counter=0;                 // Reset process counter
     }
   }
 
-    TCA0.SINGLE.INTFLAGS = TCA_SINGLE_OVF_bm;
+  TCA0.SINGLE.INTFLAGS = TCA_SINGLE_OVF_bm; // Clear interrupt flag
 }
 
+
+/*================ Main Execution Loop ================*/
 void loop() {
-  lcd_object.lcd_display();
-  buttonClass_object.button_ticks();
-  buzzerclass_object.buzzer_update();
-  // buzzerclass_object.Buzzer_update();                                 
-  lcd_object.lcd_blink_update();
-  PT100_object.read_temperature();
+
+  lcd_object.lcd_display();           // Update LCD screen
+  buttonClass_object.button_ticks();  // Process button events
+  buzzerclass_object.buzzer_update(); // Update buzzer state
+  // buzzerclass_object.Buzzer_update();
+  lcd_object.lcd_blink_update();      // Update LCD blinking
+  PT100_object.read_temperature();    // Read temperature from sensor
   // Serial3.println("1");
-  // put your main code here, to run repeatedly:
+
 }

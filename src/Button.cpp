@@ -124,6 +124,7 @@ void buttonClass:: back_to_home()
     
     // usersettings=0;
     // servicemenu=0;
+    mainscreenflag=1;
     process_flag=0;
     inmenu=0;
     secondarytimerflag=0;
@@ -1537,17 +1538,21 @@ case UserSettingsScreen4:
 void buttonClass:: user_settings()
 {
    
-    if(!usersettings && !process_flag  && !servicemenu && !secondarytimerflag){
+    if(!usersettings && !process_flag  && !servicemenu && !secondarytimerflag)
+    {
       lcd.clear();
       if(dduflag)
       {
-      screen=UserSettingsScreen1;
+        screen=UserSettingsScreen1;
+        // Serial3.println("ddu");
       }
       else
       {
         screen=UserSettingsScreen2;
+        // Serial3.println("sdu");
       }
       usersettings=1;
+      mainscreenflag=0;
       digitalWrite(BUZZER,HIGH);
       buzzerclass_object.Buzzer_beep(1000);
       buzzerclass_object.Buzzer_start();
@@ -1555,6 +1560,7 @@ void buttonClass:: user_settings()
       lcd.setCursor(0,0);
       lcd.print(">");
       uppointer=1;
+      return;
     }
 
     if(secondarytimerflag && !time_skip)
@@ -1788,6 +1794,9 @@ void buttonClass::enter_function()
             // TCA0.SINGLE.INTFLAGS = TCA_SINGLE_OVF_bm;
         }
     }
+
+
+
     // if(  screen==FactoryResetScreen )
     // {
     //     lcd.clear();

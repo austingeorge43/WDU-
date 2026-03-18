@@ -81,12 +81,13 @@ void lcdclass::lcd_display()
             delay(2000);
             screen++;
             lcd.clear();
+            mainscreenflag=1;
         
         break;
 
         case MainScreen:
-            mainscreenflag=1;
-            usersettings=0;
+            // mainscreenflag=1;
+            // usersettings=0;
             downpointer=0;
             // buttonClass_object.but_check();
         
@@ -113,7 +114,7 @@ void lcdclass::lcd_display()
             
             // lcd.clear();
             buttonClass_object.but_check();
-            break;
+        break;
         case UserSettingsScreen1:
             mainscreenflag=0;
             digitalWrite(GREEN_LED,HIGH);
