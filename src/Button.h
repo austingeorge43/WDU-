@@ -12,6 +12,7 @@ class buttonClass
     void button_setup();
     void button_ticks();
     void but_check();
+    void setPointer(uint8_t col,uint8_t row);
     static void user_settings();
     static void decrement();
     static void increment();
