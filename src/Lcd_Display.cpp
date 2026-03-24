@@ -5,6 +5,9 @@
 #define YELLOW_LED 39
 #define GREEN_LED 38
 #define BUZZER 18
+
+
+
 void toggle_screen();
 LiquidCrystal_I2C lcd(0X27,16,2);
 int screen=0;
@@ -58,24 +61,15 @@ void lcdclass:: lcd_blink_update()
 
 void lcdclass::lcd_display()
 {
-    // Serial3.print("Screen value: ");
-    // Serial3.println(screen);
-    // if(!dduflag)
-    // {
-    //     if()
-    // }
 
-    
     switch(screen)
     {
         case VersionScreen:
             lcd.setCursor(0,0);
-            // lcd.print("Hi");
             lcd.print("LABQUEST BOROSIL");
             lcd.setCursor(3,1);
             lcd.print("WDU V3.00");
             digitalWrite(BUZZER,HIGH);
-            // delay(1000);
             buzzerclass_object.Buzzer_beep(1000);
             buzzerclass_object.Buzzer_start();
             delay(2000);
@@ -86,11 +80,7 @@ void lcdclass::lcd_display()
         break;
 
         case MainScreen:
-            // mainscreenflag=1;
-            // usersettings=0;
             downpointer=0;
-            // buttonClass_object.but_check();
-        
             digitalWrite(YELLOW_LED,HIGH);
             digitalWrite(GREEN_LED,LOW);
             digitalWrite(RED_LED,LOW);
@@ -109,58 +99,38 @@ void lcdclass::lcd_display()
                 lcd.print("");
                 lcd.print(" LITERS");
             }
-
-            
-            
-            // lcd.clear();
             buttonClass_object.but_check();
         break;
+
         case UserSettingsScreen1:
             mainscreenflag=0;
             digitalWrite(GREEN_LED,HIGH);
             digitalWrite(YELLOW_LED,LOW);
-            //lcd.clear();
             lcd.setCursor(1,0);
-            lcd.print("SECONDARY FILL   ");
-            // lcd.print("SOLENOID CONTRL   ");     
+            lcd.print("SECONDARY FILL   ");    
             lcd.setCursor(1,1);
             lcd.print("FLOW CONTROL    "); 
-            // usersettings=0;
         break;
 
         case UserSettingsScreen2:
             lcd.setCursor(1,0);
-            lcd.print("FLOW CONTROL   "); 
-            // lcd.print("Operating Time");     
+            lcd.print("FLOW CONTROL   ");     
             lcd.setCursor(1,1);
             lcd.print("LEVEL CONTROL  ");
-            // lcd.print("Product Type");
         break;
         
         case UserSettingsScreen3:
             lcd.setCursor(1,0);
             lcd.print("LEVEL CONTROL  ");
-            // lcd.print("Solenoid Contrl");     
             lcd.setCursor(1,1);
-            // lcd.print("Flow Control");
             lcd.print("SOLENOID CONTRL   ");
-            // lcd.print("PROBE CONTROL   "); 
         break;
 
         case UserSettingsScreen4:
             lcd.setCursor(1,0);
-            // lcd.print("Operating Time");
-            lcd.print("SOLENOID CONTRL   ");
-            // lcd.print("PROBE CONTROL   "); 
-              
-            // lcd.print("Solenoid Contrl");     
+            lcd.print("SOLENOID CONTRL   ");   
             lcd.setCursor(1,1);
-            // lcd.print("Flow Control");
             lcd.print("PROBE CONTROL   ");
-            // lcd.print("SOLENOID CONTRL   "); 
-            
-            // lcd.print("SOLENOID CONTRL"); 
-
         break;
 
          case ServiceMenuScreen1:
@@ -168,45 +138,35 @@ void lcdclass::lcd_display()
             digitalWrite(YELLOW_LED,LOW);
             lcd.setCursor(1,0);
             lcd.print("PRODUCT TYPE  ");
-            // lcd.print("Solenoid Contrl");     
             lcd.setCursor(1,1);
-            // lcd.print("Flow Control");
             lcd.print("SUBPRODUCT TYPE   "); 
         break;
 
         case ServiceMenuScreen2:
             lcd.setCursor(1,0);
-            lcd.print("SUBPRODUCT TYPE  ");
-            // lcd.print("Solenoid Contrl");     
+            lcd.print("SUBPRODUCT TYPE  ");  
             lcd.setCursor(1,1);
-            // lcd.print("Flow Control");
             lcd.print("CALIBRATION   "); 
         break;
 
         case ServiceMenuScreen3:
             lcd.setCursor(1,0);
-            lcd.print("CALIBRATION   ");
-            // lcd.print("Solenoid Contrl");     
+            lcd.print("CALIBRATION   ");    
             lcd.setCursor(1,1);
-            // lcd.print("Flow Control");
             lcd.print("SAFETY TEMP.   "); 
         break;
 
         case ServiceMenuScreen4:
             lcd.setCursor(1,0);
-            lcd.print("SAFETY TEMP.   ");
-            // lcd.print("Solenoid Contrl");     
+            lcd.print("SAFETY TEMP.   ");  
             lcd.setCursor(1,1);
-            // lcd.print("Flow Control");
             lcd.print("PROBE CALB "); 
         break;
 
         case ServiceMenuScreen5:
             lcd.setCursor(1,0);
-            lcd.print("PROBE CALB   ");
-            // lcd.print("Solenoid Contrl");     
+            lcd.print("PROBE CALB   "); 
             lcd.setCursor(1,1);
-            // lcd.print("Flow Control");
             lcd.print("FACTORY RESET "); 
         break;
 
@@ -216,59 +176,6 @@ void lcdclass::lcd_display()
             lcd.setCursor(1,1);
             lcd.print("FACTORY RESET   ");
         break;
-
-
-        // case UserSettingsScreen5:
-        //     lcd.setCursor(1,0);
-        //     // lcd.print("Operating Time");
-        //     //  lcd.print("Product Type"); 
-        //     lcd.print("FLOW CONTROL   ");
-        //     ;     
-        //     lcd.setCursor(1,1);
-        //     // lcd.print("Flow Control");
-        //     // lcd.print("FLOW CONTROL   ");
-        //     lcd.print("SECONDARY FILL   ");
-
-        // break;
-
-        // case SDUUserSettingsScreen5:
-        //     lcd.setCursor(1,0);
-        //     lcd.print("FLOW CONTROL   ");    
-        //     lcd.setCursor(1,1);
-        //     lcd.print("FACTORY RESET   ");
-        // break;
-
-        // case UserSettingsScreen6:
-        //     lcd.setCursor(1,0);
-        //     // lcd.print("Operating Time");
-        //     //  lcd.print("Product Type"); 
-        //     // lcd.print("PRODUCT TYPE   ");
-        //      lcd.print("SECONDARY FILL   ");     
-        //     lcd.setCursor(1,1);
-        //     // lcd.print("Flow Control");
-        //     // lcd.print("FLOW CONTROL   ");
-        //     lcd.print("SAFETY TEMP.   ");
-        // break;
-
-        // case UserSettingsScreen7:
-        //     lcd.setCursor(1,0);
-        //     // lcd.print("Operating Time");
-        //     //  lcd.print("Product Type"); 
-        //     // lcd.print("PRODUCT TYPE   ");
-        //      lcd.print("SAFETY TEMP.   ");     
-        //     lcd.setCursor(1,1);
-        //     // lcd.print("Flow Control");
-        //     // lcd.print("FLOW CONTROL   ");
-        //     lcd.print("PROBE CALB   ");
-        // break;  
-
-        // case UserSettingsScreen8:
-        //     lcd.setCursor(1,0);
-        //     lcd.print("PROBE CALB   ");     
-        //     lcd.setCursor(1,1);
-        //     lcd.print("FACTORY RESET");
-        // break;
-
 
         case CalibrationSettings:
             lcd.setCursor(0,0);
@@ -358,16 +265,10 @@ void lcdclass::lcd_display()
         
 
         case ProcessScreen:
-        // Serial3.println("1234");
             lcd.setCursor(0,0);
             digitalWrite(RED_LED,HIGH);
             digitalWrite(YELLOW_LED,LOW);
             lcd.print("PROCESS STARTED");
-            // remaining_time = end_time - one_second_counter;
-            // lcd.setCursor(5,1);
-            // lcd.print(remaining_time / 60);
-            // lcd.print("m ");
-
             if ((one_second_counter - previous_time) >= time_per_step)
             {
                 previous_time = one_second_counter;
@@ -386,9 +287,6 @@ void lcdclass::lcd_display()
 
 
             process_object.error_check();
-            // process_object.heater1_start();
-            // process_object.heater2_start();
-
             if(!error_check_flag && !temp_drop_flag)
             {
             process_flag=1;
@@ -397,14 +295,14 @@ void lcdclass::lcd_display()
         break;
 
         case SecondaryFillTimer:
-            // digitalWrite(BUZZER,LOW); 
             process_object.error_check();
             lcd.setCursor(0,0);
-            digitalWrite(RED_LED,HIGH); 
+            digitalWrite(RED_LED,HIGH);
+            digitalWrite(YELLOW_LED,LOW);  
+            
             lcd.print("SECONDARY BOILER");
             lcd.setCursor(0,1);
             lcd.print("FILLING...      ");
-            // lcd.setCursor(11,1);
             if(!pauseflag)
             {
                 Sec_time = pre_end_time - one_second_counter;
@@ -414,7 +312,6 @@ void lcdclass::lcd_display()
             // lcd.print(Sec_time);
             // lcd.print("m ");
 
-            // process_object.heater1_start();
 
             if(!error_check_flag)
             {
@@ -442,8 +339,6 @@ void lcdclass::lcd_display()
             lcd.setCursor(0,1);
             lcd.print("Error   ");
             lcd.print(temp_error,1);
-            // lcd.print(" C");
-
         break;
 
         case TempSensorSettings:
@@ -464,13 +359,7 @@ void lcdclass::lcd_display()
             lcd.setCursor(12,1);
             lcd.print("NO");
         break;
-        
-        // case SolenoidErrorScreen:
-        //     lcd.setCursor(0,0);
-        //     lcd.print("PROCESS COMPLETE ");
-        //     lcd.setCursor(0,1);
-        //     lcd.print("CLOSE WATER TAP");
-        // break;
+
         case ErrorScreen:
             if(error_check_flag)
             {
@@ -504,7 +393,10 @@ void lcdclass::lcd_display()
                         if(millis()- solenoid_stop >= 5000)
                         {
                             digitalWrite(SOLENOID1,HIGH);
+                            if(dduflag && process_flag)
+                            {
                             digitalWrite(SOLENOID2,HIGH);
+                            }
 
                         }
                     }
@@ -573,31 +465,9 @@ void lcdclass::lcd_display()
             }
         break;
 
-        // case ServiceMenuScreen:
-        //     lcd.clear();
-        //     lcd.setCursor(0,0);
-        //     lcd.print("HIIII");
-            
-
-        // break;
-
         default:
 
         break;
-          
-            
-            
-
-
-            // lcd.setCursor(0,1);
-            // lcd.print(optime[optimecounter]);
-
-            
-
-
-
-            
-
     }
     
 

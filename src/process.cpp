@@ -374,7 +374,7 @@ void process:: process_start()                    // Process timing funcution
     if(process_flag && !error_check_flag)
     {
     // end_time=5; //for testing purpose only. Comment this line during actual operation and uncomment the line below.
-    if(one_second_counter>=end_time)
+    if(one_second_counter>=15)//end_time)
     {
         digitalWrite(BUZZER,HIGH);
         buzzerclass_object.Buzzer_beep(1000);
@@ -384,9 +384,13 @@ void process:: process_start()                    // Process timing funcution
         process_flag=0;
         process_object.heater1_stop();
         buzzerclass_object.heater_stop();
+        process_object.Solenoid1_stop();
+        process_object.Solenoid2_stop();
+
         if(solenoidoverride)
         {
             screen=MainScreen;
+            mainscreenflag=1;
         }
         else
         {
@@ -443,6 +447,16 @@ void process:: process_stop()
     digitalWrite(SOLENOID2,LOW);
     digitalWrite(CONTACTOR2,LOW);
     digitalWrite(HEATER2,LOW);
+}
+
+void process:: Solenoid1_stop()
+{
+    digitalWrite(SOLENOID1,LOW);
+}
+
+void process:: Solenoid2_stop()
+{
+    digitalWrite(SOLENOID2,LOW);
 }
 
 process process_object=process();

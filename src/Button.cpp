@@ -3,6 +3,9 @@
 
 #define MAX_SAFETY_TEMP 200
 #define MIN_SAFETY_TEMP 50
+#define SAFETY_TEMP_STEP 1
+
+#define OPERATING_TIME 4
 
 float counter=0.0;
 float calibration_value=3.0;
@@ -137,6 +140,7 @@ void buttonClass:: back_to_home()
     // servicemenu=0;
     mainscreenflag=1;
     process_flag=0;
+    temp_drop_flag=0;
     inmenu=0;
     secondarytimerflag=0;
     process_object.heater1_stop();
@@ -181,7 +185,7 @@ void buttonClass::long_press_up()
     {
         if(mainscreenflag)
         {
-            Max_liter=(2*optime[optimecounter])*(variant/10.0);
+            Max_liter=(2*OPERATING_TIME)*(variant/10.0);
             if(counter<Max_liter)
             {
                 longpress_count++;
@@ -196,7 +200,7 @@ void buttonClass::long_press_up()
 
         if(screen==CalibrationSettings)
         {
-            Max_liter=(2*optime[optimecounter])*(variant/10.0);
+            Max_liter=(2*OPERATING_TIME)*(variant/10.0);
             if(calibration_value<Max_liter)
             {
                 longpress_count++;
@@ -215,7 +219,7 @@ void buttonClass::long_press_up()
             longpress_count++;
             if(longpress_count==5)
             {
-                Heatersafteytemp+=5;
+                Heatersafteytemp+=SAFETY_TEMP_STEP;
                 longpress_count=0;
             }
             }
@@ -260,7 +264,7 @@ void buttonClass::long_press_down()
             longpress_count++;
             if(longpress_count==5)
             {
-                Heatersafteytemp-=5;
+                Heatersafteytemp-= SAFETY_TEMP_STEP;
                 longpress_count=0;
             }
             }
@@ -270,7 +274,7 @@ void buttonClass::long_press_down()
 void buttonClass::increment()
 {
     if(mainscreenflag){
-        Max_liter=(2*optime[optimecounter])*(variant/10.0);
+        Max_liter=(2*OPERATING_TIME)*(variant/10.0);
         if(counter<Max_liter)
         {
         counter+=0.5;
@@ -287,7 +291,7 @@ void buttonClass::increment()
         case SafteyTemperatureSettings:
             if(Heatersafteytemp<MAX_SAFETY_TEMP)
             {
-            Heatersafteytemp+=5;
+            Heatersafteytemp+=SAFETY_TEMP_STEP;
             }
         break;
 
@@ -729,7 +733,7 @@ void buttonClass::decrement()
     case SafteyTemperatureSettings:
         if(Heatersafteytemp > MIN_SAFETY_TEMP)
         {
-            Heatersafteytemp-=5;
+            Heatersafteytemp-=SAFETY_TEMP_STEP;
         }    
     break;
 
@@ -1340,6 +1344,7 @@ void buttonClass::enter_function()
         lcd.clear();
         error_check_flag=0;
         closetap=0;
+        return;
     }
 
     if(mainscreenflag)

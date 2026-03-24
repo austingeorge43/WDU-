@@ -17,6 +17,8 @@ class process
     void heater2_start();
     void heater2_stop();    
     void water_level_detection();
+    void Solenoid1_stop();
+    void Solenoid2_stop();
 
 };
 
