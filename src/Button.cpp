@@ -4,6 +4,11 @@
 #define MAX_SAFETY_TEMP 200
 #define MIN_SAFETY_TEMP 50
 #define SAFETY_TEMP_STEP 1
+#define PROBE_CALIBRATION_LIMIT 20
+
+#define RED_LED 17 //HELLO
+#define YELLOW_LED 39
+#define GREEN_LED 38
 
 #define OPERATING_TIME 4
 
@@ -35,7 +40,7 @@ bool time_skip=0;
 
 uint8_t skip_count=0;
 uint8_t longpress_count=0;
-int Heatersafteytemp=50;
+int Heatersafteytemp=100;
 
 
 // bool in_usersettings=0;
@@ -224,6 +229,20 @@ void buttonClass::long_press_up()
             }
             }
         }
+
+        if(screen==ProbeCalibrationSettings)
+        {
+            if(temp_error<=PROBE_CALIBRATION_LIMIT)
+            {
+                longpress_count++;
+                if(longpress_count==5)
+                {
+                    temp_error+=0.1;
+                    longpress_count=0;
+                }
+            
+            }
+        }
     }
 
 }
@@ -269,6 +288,19 @@ void buttonClass::long_press_down()
             }
             }
         }
+       if(screen==ProbeCalibrationSettings)
+       {
+            if(temp_error>=-(PROBE_CALIBRATION_LIMIT))
+            {
+                longpress_count++;
+                if(longpress_count==5)
+                {
+                    temp_error-=0.1;
+                    longpress_count=0;
+                }
+                
+            }
+        }
     }
 }
 void buttonClass::increment()
@@ -282,61 +314,6 @@ void buttonClass::increment()
     }
     switch(screen)
     {
-        case ProbeCalibrationSettings:
-            temp_error+=0.1;
-
-        break;
-
-
-        case SafteyTemperatureSettings:
-            if(Heatersafteytemp<MAX_SAFETY_TEMP)
-            {
-            Heatersafteytemp+=SAFETY_TEMP_STEP;
-            }
-        break;
-
-
-        case SecondaryFillSettings:
-            if(!secondaryyes)
-            {
-                // lcd.clear();
-                // lcd.setCursor(0,1);
-                // lcd.print(">");
-                buttonClass_object.setPointer(0,1);
-                secondaryyes=1;
-            }
-            else
-            {
-                // lcd.clear();
-                // lcd.setCursor(11,1);
-                // lcd.print(">");
-                buttonClass_object.setPointer(11,1);
-                secondaryyes=0;
-            }
-        break;
-        
-        case CalibrationSettings:
-            calibration_value+=0.1;
-        break;
-
-         case FactoryResetScreen:
-            if(!factoryresetflag)
-            {
-                // lcd.clear();
-                // lcd.setCursor(0,1);
-                // lcd.print(">");
-                buttonClass_object.setPointer(0,1);
-                factoryresetflag=1;
-            }
-            else
-            {
-                // lcd.clear();
-                // lcd.setCursor(11,1);
-                // lcd.print(">");
-                buttonClass_object.setPointer(11,1);
-                factoryresetflag=0;
-            }
-        break;
 
 
 //  **************** User Settings *******************
@@ -347,9 +324,6 @@ void buttonClass::increment()
                 if(uppointer)
                 {
                     screen=UserSettingsScreen4;
-                    // lcd.clear();
-                    // lcd.setCursor(0,1);
-                    // lcd.print(">");
                     buttonClass_object.setPointer(0,1);
                     uppointer=0;
                     downpointer=1;
@@ -357,9 +331,6 @@ void buttonClass::increment()
                 }
                 else
                 {
-                    // lcd.clear();
-                    // lcd.setCursor(0,0);
-                    // lcd.print(">");
                     buttonClass_object.setPointer(0,0);
                     uppointer=1;
                     downpointer=0;
@@ -373,9 +344,6 @@ void buttonClass::increment()
                 if(dduflag)
                 {
                     screen=UserSettingsScreen1;
-                    // lcd.clear();
-                    // lcd.setCursor(0,0);
-                    // lcd.print(">");
                     buttonClass_object.setPointer(0,0);
                     uppointer=1;
                     downpointer=0;
@@ -383,9 +351,6 @@ void buttonClass::increment()
                 else
                 {
                     screen=UserSettingsScreen3;
-                    // lcd.clear();
-                    // lcd.setCursor(0,1);
-                    // lcd.print(">");
                     buttonClass_object.setPointer(0,1);
                     uppointer=0;
                     downpointer=1;
@@ -393,9 +358,6 @@ void buttonClass::increment()
             }
             else 
             {
-            //   lcd.clear();
-            //   lcd.setCursor(0,0);
-            //   lcd.print(">");
             buttonClass_object.setPointer(0,0);
               uppointer=1;
               downpointer=0;
@@ -406,18 +368,12 @@ void buttonClass::increment()
           if(uppointer)
             {
                 screen=UserSettingsScreen2;
-                // lcd.clear();
-                // lcd.setCursor(0,0);
-                // lcd.print(">");
                 buttonClass_object.setPointer(0,0);
                 uppointer=1;
                 downpointer=0;
             }
             else
             {
-                // lcd.clear();
-                // lcd.setCursor(0,0);
-                // lcd.print(">");
                 buttonClass_object.setPointer(0,0);
                 uppointer=1;
                 downpointer=0;
@@ -428,23 +384,94 @@ void buttonClass::increment()
           if(uppointer)
             {
                 screen=UserSettingsScreen3;
-                // lcd.clear();
-                // lcd.setCursor(0,0);
-                // lcd.print(">");
                 buttonClass_object.setPointer(0,0);
                 uppointer=1;
                 downpointer=0;
             }
             else
             {
-                // lcd.clear();
-                // lcd.setCursor(0,0);
-                // lcd.print(">");
                 buttonClass_object.setPointer(0,0);
                 uppointer=1;
                 downpointer=0;
             }
         break;
+
+         case SecondaryFillSettings:
+            if(!secondaryyes)
+            {
+                buttonClass_object.setPointer(0,1);
+                secondaryyes=1;
+            }
+            else
+            {
+                buttonClass_object.setPointer(11,1);
+                secondaryyes=0;
+            }
+        break;
+
+         case FlowControlSettings:
+          if(!flowoverride)
+            {
+                lcd.setCursor(0,1);
+                lcd.print("> OVERRIDE");
+                flowoverride=1;
+            }
+            else
+            {
+                lcd.setCursor(0,1);
+                lcd.print("> ACTIVE     ");
+                flowoverride=0;
+            }
+        break;
+
+        case LevelSensorSettings:
+            if(!leveloverride)
+            {
+                lcd.setCursor(0,1);
+                lcd.print("> OVERRIDE");
+                leveloverride=1;
+            }
+            else
+            {
+                lcd.setCursor(0,1);
+                lcd.print("> ACTIVE     ");
+                leveloverride=0;
+            }
+        break;
+
+        case SolenoidControlSettings:
+            if(!solenoidoverride)
+            {
+                lcd.setCursor(0,1);
+                lcd.print("> OVERRIDE");
+                solenoidoverride=1;
+            }
+            else
+            {
+                lcd.setCursor(0,1);
+                lcd.print("> ACTIVE     ");
+                solenoidoverride=0;
+            }
+        break;
+
+         case TempSensorSettings:
+            if(!probeoverride)
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> OVERRIDE");
+                probeoverride=1;
+            }
+            else
+            {
+                // lcd.clear();
+                lcd.setCursor(0,1);
+                lcd.print("> ACTIVE     ");
+                probeoverride=0;
+            }
+        break;
+
+        
 
 //  **************** Service menu Settings *******************        
 
@@ -454,18 +481,12 @@ void buttonClass::increment()
                 if(uppointer)
                 {
                     screen=ServiceMenuScreen5;
-                    // lcd.clear();
-                    // lcd.setCursor(0,1);
-                    // lcd.print(">");
                     buttonClass_object.setPointer(0,1);
                      uppointer=0;
                     downpointer=1;
                 }
                 else
                 {
-                    // lcd.clear();
-                    // lcd.setCursor(0,0);
-                    // lcd.print(">");
                     buttonClass_object.setPointer(0,0);
                     uppointer=1;
                     downpointer=0;
@@ -575,9 +596,6 @@ void buttonClass::increment()
             }
             else
             {
-                // lcd.clear();
-                // lcd.setCursor(0,0);
-                // lcd.print(">");
                 buttonClass_object.setPointer(0,0);
                 uppointer=1;
                 downpointer=0;
@@ -605,94 +623,6 @@ void buttonClass::increment()
                 downpointer=0;
             }
         break;
-  
-        case OperatingTimeSettings:
-            if(optimecounter<3){
-            optimecounter++;
-            }
-            else
-            {
-                optimecounter=0;
-            }
-        break;
-
-        case SubProductTypeSettings:
-            if(prodtypecounter<2){
-            prodtypecounter++;
-            }
-            else
-            {
-                prodtypecounter=0;
-            }
-        break;
-
-        case SolenoidControlSettings:
-            if(!solenoidoverride)
-            {
-                // lcd.clear();
-                lcd.setCursor(0,1);
-                lcd.print("> OVERRIDE");
-                solenoidoverride=1;
-            }
-            else
-            {
-                // lcd.clear();
-                lcd.setCursor(0,1);
-                lcd.print("> ACTIVE     ");
-                solenoidoverride=0;
-            }
-        break;
-
-        case TempSensorSettings:
-            if(!probeoverride)
-            {
-                // lcd.clear();
-                lcd.setCursor(0,1);
-                lcd.print("> OVERRIDE");
-                probeoverride=1;
-            }
-            else
-            {
-                // lcd.clear();
-                lcd.setCursor(0,1);
-                lcd.print("> ACTIVE     ");
-                probeoverride=0;
-            }
-        break;
-
-        case LevelSensorSettings:
-            if(!leveloverride)
-            {
-                // lcd.clear();
-                lcd.setCursor(0,1);
-                lcd.print("> OVERRIDE");
-                leveloverride=1;
-            }
-            else
-            {
-                // lcd.clear();
-                lcd.setCursor(0,1);
-                lcd.print("> ACTIVE     ");
-                leveloverride=0;
-            }
-        break;
-
-        case FlowControlSettings:
-          if(!flowoverride)
-            {
-                // lcd.clear();
-                lcd.setCursor(0,1);
-                lcd.print("> OVERRIDE");
-                flowoverride=1;
-            }
-            else
-            {
-                // lcd.clear();
-                lcd.setCursor(0,1);
-                lcd.print("> ACTIVE     ");
-                flowoverride=0;
-            }
-        break;
 
         case ProductTypeSettings:
             if(!dduflag)
@@ -710,6 +640,54 @@ void buttonClass::increment()
                 dduflag=0;
             }
         break;
+
+        case SubProductTypeSettings:
+            if(prodtypecounter<2){
+            prodtypecounter++;
+            }
+            else
+            {
+                prodtypecounter=0;
+            }
+        break;
+
+        case CalibrationSettings:
+            calibration_value+=0.1;
+        break;
+
+        case SafteyTemperatureSettings:
+            if(Heatersafteytemp<MAX_SAFETY_TEMP)
+            {
+            Heatersafteytemp+=SAFETY_TEMP_STEP;
+            }
+        break;
+
+        case ProbeCalibrationSettings:
+            if(temp_error<=PROBE_CALIBRATION_LIMIT)
+            {
+            temp_error+=0.1;
+            }
+
+        break;
+
+        case FactoryResetScreen:
+            if(!factoryresetflag)
+            {
+                // lcd.clear();
+                // lcd.setCursor(0,1);
+                // lcd.print(">");
+                buttonClass_object.setPointer(0,1);
+                factoryresetflag=1;
+            }
+            else
+            {
+                // lcd.clear();
+                // lcd.setCursor(11,1);
+                // lcd.print(">");
+                buttonClass_object.setPointer(11,1);
+                factoryresetflag=0;
+            }
+        break;   
     }
 
 }
@@ -726,8 +704,10 @@ void buttonClass::decrement()
   switch(screen)
   {
     case ProbeCalibrationSettings:
+        if(temp_error>=-(PROBE_CALIBRATION_LIMIT))
+        {
             temp_error-=0.1;
-
+        }
     break;
 
     case SafteyTemperatureSettings:
@@ -1188,12 +1168,11 @@ void buttonClass:: user_settings()
       }
       usersettings=1;
       mainscreenflag=0;
+      digitalWrite(YELLOW_LED,LOW);
+      digitalWrite(GREEN_LED,HIGH);
       digitalWrite(BUZZER,HIGH);
       buzzerclass_object.Buzzer_beep(1000);
       buzzerclass_object.Buzzer_start();
-    //   lcd.clear();
-    //   lcd.setCursor(0,0);
-    //   lcd.print(">");
         buttonClass_object.setPointer(0,0);
       uppointer=1;
       return;
@@ -1207,7 +1186,9 @@ void buttonClass:: user_settings()
             one_second_counter=pre_end_time-5;
             skip_count=0;
             time_skip=1;
-
+            digitalWrite(BUZZER,HIGH);
+            buzzerclass_object.Buzzer_beep(1000);
+            buzzerclass_object.Buzzer_start();
         }
     }
     else
@@ -1222,7 +1203,7 @@ void buttonClass:: back_screen()
 {
     if((usersettings || servicemenu) && !inmenu){
         lcd.clear();
-        eeprom_object.eeprom_datawrite();
+        // eeprom_object.eeprom_datawrite();
         screen=MainScreen;
         mainscreenflag=1;
         usersettings=0;
@@ -1350,17 +1331,17 @@ void buttonClass::enter_function()
     if(mainscreenflag)
     {
         process_object.variant_settings();
-        // lcd.clear();
+        
         Serial3.println("BUZZZZZZZZZZZER");
         digitalWrite(BUZZER,HIGH);
-        // delay(500);
+        
         buzzerclass_object.Buzzer_beep(1000);
         buzzerclass_object.Buzzer_start();
 
         if(secondaryyes && dduflag)
         {
             
-            // Serial3.println("Secondary Fill");
+           
             screen=SecondaryFillTimer;
             mainscreenflag=0;
             one_second_counter=0;
@@ -1391,12 +1372,10 @@ void buttonClass::enter_function()
 
         if(inmenu)
     {
-        // lcd.clear();
+        
         usersettings=1;
         uppointer=1;
         downpointer=0;
-        // lcd.setCursor(0,0);
-        // lcd.print(">");
         buttonClass_object.setPointer(0,0);
         inmenu=0;
 
@@ -1412,9 +1391,6 @@ void buttonClass::enter_function()
 
             case TempSensorSettings:
                 screen=UserSettingsScreen4;
-                // lcd.clear();
-                // lcd.setCursor(0,1);
-                // lcd.print(">");
                 buttonClass_object.setPointer(0,1);
                 uppointer=0;
                 downpointer=1;
@@ -1441,9 +1417,11 @@ void buttonClass::enter_function()
 
             case ProductTypeSettings:
                 screen=ServiceMenuScreen1;
+                EEPROM.write(PRODUCT_SELECTION, dduflag);
             break;
 
             case CalibrationSettings:
+                EEPROM.put(CALIBRATION_VALUE, calibration_value);
                 if(dduflag)
                 {
                     screen=ServiceMenuScreen3;
@@ -1461,14 +1439,17 @@ void buttonClass::enter_function()
             break;
 
             case SafteyTemperatureSettings:
+                EEPROM.put(SAFETY_TEMP, Heatersafteytemp);
                 screen=ServiceMenuScreen4;
             break;
 
             case ProbeCalibrationSettings:
+                EEPROM.put(PROBE_ERROR, temp_error);
                 screen=ServiceMenuScreen5;
             break;
 
             case SubProductTypeSettings:
+                EEPROM.put(SUBPRODUCT_SELECTION,prodtypecounter);
                 screen=ServiceMenuScreen2;
             break;
 
@@ -1486,7 +1467,8 @@ void buttonClass::enter_function()
                     digitalWrite(BUZZER,LOW);
                     uppointer=1;
                     downpointer=0;
-                    // usersettings=0;
+                    mainscreenflag=1;
+                    usersettings=0;
                     servicemenu=0;
                     lcd.clear();
                     screen=MainScreen;

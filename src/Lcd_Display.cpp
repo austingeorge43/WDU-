@@ -339,6 +339,7 @@ void lcdclass::lcd_display()
             lcd.setCursor(0,1);
             lcd.print("Error   ");
             lcd.print(temp_error,1);
+            lcd.print("  ");
         break;
 
         case TempSensorSettings:

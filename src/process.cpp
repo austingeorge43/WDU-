@@ -331,7 +331,7 @@ void process:: secondary_fill()           // This functions runs the Secondary b
             lcd.setCursor(0,1);
             lcd.print("FILLING COMPLETED");
             digitalWrite(BUZZER,HIGH);
-            //  delay(1000);
+             delay(1000);
             buzzerclass_object.Buzzer_beep(1000);
             buzzerclass_object.Buzzer_start();
             if(temp_drop_flag)                          //  If  fuction is called between the process because of secondary boiler empty
@@ -374,7 +374,7 @@ void process:: process_start()                    // Process timing funcution
     if(process_flag && !error_check_flag)
     {
     // end_time=5; //for testing purpose only. Comment this line during actual operation and uncomment the line below.
-    if(one_second_counter>=15)//end_time)
+    if(one_second_counter>= end_time)
     {
         digitalWrite(BUZZER,HIGH);
         buzzerclass_object.Buzzer_beep(1000);

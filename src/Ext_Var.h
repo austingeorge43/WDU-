@@ -20,6 +20,12 @@
 #define SOLENOID1 13
 #define SOLENOID2 12
 
+#define PRODUCT_SELECTION 0
+#define SUBPRODUCT_SELECTION 1
+#define SAFETY_TEMP 3
+#define CALIBRATION_VALUE 5
+#define PROBE_ERROR 9
+
 extern int prodtype[3];
 extern int  optime[4];
 

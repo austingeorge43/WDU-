@@ -23,7 +23,7 @@ void eepromclass::eeprom_defaultvalue()                 // Factory Reset Conditi
     calibration_value=0.0;
     solenoidoverride=1;
     flowoverride=0;
-    Heatersafteytemp=50;
+    Heatersafteytemp=100;
     eeprom_object.eeprom_datawrite();
 
 }
@@ -45,6 +45,32 @@ void eepromclass:: eeprom_datawrite()
     EEPROM.put(PROBE_ERROR, temp_error);
 
 }
+
+void eepromclass:: eeprom_product_selection()
+{
+     EEPROM.write(PRODUCT_SELECTION, dduflag);
+}
+
+void eepromclass:: eeprom_subproduct_selection()
+{
+    EEPROM.put(SUBPRODUCT_SELECTION,prodtypecounter);
+}
+
+void eepromclass:: eeprom_calibration_value()
+{
+    EEPROM.put(CALIBRATION_VALUE, calibration_value);
+}
+
+void eepromclass:: eeprom_safety_temperature()
+{
+    EEPROM.put(SAFETY_TEMP, Heatersafteytemp);
+}
+
+void eepromclass:: eeprom_probe_error()
+{
+    EEPROM.put(PROBE_ERROR, temp_error);
+}
+
 
 void eepromclass :: eeprom_dataread()
 {
