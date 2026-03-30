@@ -152,7 +152,7 @@ void buttonClass:: back_to_home()
     buzzerclass_object.heater_stop();
     digitalWrite(SOLENOID1,LOW);
     digitalWrite(SOLENOID2,LOW);
-    eeprom_object.eeprom_datawrite();
+    eeprom_object.eeprom_dataread();
     screen=MainScreen;
     if(!solenoidoverride && !usersettings && !servicemenu  ) 
     {
@@ -1228,16 +1228,19 @@ void buttonClass:: back_screen()
         {
             
             case FlowControlSettings:
+                EEPROM.get(FLOW_CONTROL, flowoverride);
                 screen=UserSettingsScreen2;
             break;
 
             case LevelSensorSettings:
-                 
-                    screen=UserSettingsScreen3;
+                EEPROM.get(LEVEL_CONTROL, leveloverride); 
+                screen=UserSettingsScreen3;
                 
             break;
 
             case TempSensorSettings:
+                EEPROM.get(PROBE_CONTROL, probeoverride);
+
                 // lcd.clear();
                 uppointer=0;
                 downpointer=1;
@@ -1249,6 +1252,7 @@ void buttonClass:: back_screen()
             break;
 
             case SolenoidControlSettings:
+                EEPROM.get(SOLENOID_CONTROL, solenoidoverride);
                 if(dduflag)
                 {
                     screen=UserSettingsScreen4;
@@ -1266,10 +1270,12 @@ void buttonClass:: back_screen()
             break;
 
             case ProductTypeSettings:
+                dduflag=EEPROM.read(PRODUCT_SELECTION);
                 screen=ServiceMenuScreen1;
             break;
 
             case CalibrationSettings:
+                EEPROM.get(CALIBRATION_VALUE, calibration_value);
                 if(dduflag)
                 {
                     screen=ServiceMenuScreen3;
@@ -1282,18 +1288,22 @@ void buttonClass:: back_screen()
             break;
 
             case SecondaryFillSettings:
+                EEPROM.get(SECONDARY_FILL, secondaryyes);
                 screen=UserSettingsScreen1;
             break;
 
             case SafteyTemperatureSettings:
+                EEPROM.get(SAFETY_TEMP, Heatersafteytemp);
                 screen=ServiceMenuScreen4;
             break;
 
             case ProbeCalibrationSettings:
+                EEPROM.get(PROBE_ERROR, temp_error);
                 screen=ServiceMenuScreen5;
             break;
 
             case SubProductTypeSettings:
+                EEPROM.get(SUBPRODUCT_SELECTION,prodtypecounter);
                 screen=ServiceMenuScreen2;
             break;
 
@@ -1382,14 +1392,17 @@ void buttonClass::enter_function()
         switch(screen)
         {
             case FlowControlSettings:
+                EEPROM.put(FLOW_CONTROL, flowoverride);
                 screen=UserSettingsScreen2;
             break;
 
             case LevelSensorSettings:
+                EEPROM.put(LEVEL_CONTROL, leveloverride);
                 screen=UserSettingsScreen3; 
             break;
 
             case TempSensorSettings:
+                EEPROM.put(PROBE_CONTROL, probeoverride);
                 screen=UserSettingsScreen4;
                 buttonClass_object.setPointer(0,1);
                 uppointer=0;
@@ -1398,6 +1411,7 @@ void buttonClass::enter_function()
             break;
 
             case SolenoidControlSettings:
+                EEPROM.put(SOLENOID_CONTROL, solenoidoverride);
                 if(dduflag)
                 {
                     screen=UserSettingsScreen4;
@@ -1435,7 +1449,9 @@ void buttonClass::enter_function()
             break;
 
             case SecondaryFillSettings:
+                 EEPROM.put(SECONDARY_FILL, secondaryyes);
                 screen=UserSettingsScreen1;
+
             break;
 
             case SafteyTemperatureSettings:

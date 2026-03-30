@@ -4,11 +4,11 @@
 #include <EEPROM.h>
 
 
-#define PRODUCT_SELECTION 0
-#define SUBPRODUCT_SELECTION 1
-#define SAFETY_TEMP 3
-#define CALIBRATION_VALUE 5
-#define PROBE_ERROR 9
+// #define PRODUCT_SELECTION 0
+// #define SUBPRODUCT_SELECTION 1
+// #define SAFETY_TEMP 3
+// #define CALIBRATION_VALUE 5
+// #define PROBE_ERROR 9
 
 //----------DEFINATIONS
 
@@ -28,6 +28,19 @@ void eepromclass::eeprom_defaultvalue()                 // Factory Reset Conditi
 
 }
 
+void eepromclass:: eeprom_update_sensor()
+{
+    EEPROM.update(SECONDARY_FILL, secondaryyes);
+
+    EEPROM.update(FLOW_CONTROL, flowoverride);
+
+    EEPROM.update(LEVEL_CONTROL, leveloverride);
+
+    EEPROM.update(SOLENOID_CONTROL, solenoidoverride);
+
+    EEPROM.update(PROBE_CONTROL, probeoverride);
+}
+
 void eepromclass:: eeprom_datawrite()
 {
 //   prodtypecounter=1;
@@ -43,6 +56,21 @@ void eepromclass:: eeprom_datawrite()
     EEPROM.put(SAFETY_TEMP, Heatersafteytemp);
  
     EEPROM.put(PROBE_ERROR, temp_error);
+
+
+
+    EEPROM.put(SECONDARY_FILL, secondaryyes);
+
+    EEPROM.put(FLOW_CONTROL, flowoverride);
+
+    EEPROM.put(LEVEL_CONTROL, leveloverride);
+
+    EEPROM.put(SOLENOID_CONTROL, solenoidoverride);
+
+    EEPROM.put(PROBE_CONTROL, probeoverride);
+
+    
+
 
 }
 
@@ -79,6 +107,16 @@ void eepromclass :: eeprom_dataread()
     EEPROM.get(CALIBRATION_VALUE, calibration_value);
     EEPROM.get(SAFETY_TEMP, Heatersafteytemp);
     EEPROM.get(PROBE_ERROR, temp_error);
+
+    EEPROM.get(SECONDARY_FILL, secondaryyes);
+
+    EEPROM.get(FLOW_CONTROL, flowoverride);
+
+    EEPROM.get(LEVEL_CONTROL, leveloverride);
+
+    EEPROM.get(SOLENOID_CONTROL, solenoidoverride);
+
+    EEPROM.get(PROBE_CONTROL, probeoverride);
 
     // Serial3.println(dduflag);
     // Serial3.println(calibration_value);

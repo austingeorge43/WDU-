@@ -26,6 +26,13 @@
 #define CALIBRATION_VALUE 5
 #define PROBE_ERROR 9
 
+#define SECONDARY_FILL 15
+#define FLOW_CONTROL 17
+#define LEVEL_CONTROL 19
+#define SOLENOID_CONTROL 21
+#define PROBE_CONTROL 23
+
+
 extern int prodtype[3];
 extern int  optime[4];
 

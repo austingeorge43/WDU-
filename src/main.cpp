@@ -20,6 +20,7 @@ bool pauseflag=0;              // Pauses process timer
 void setup() {
 
   Serial3.begin(9600);                // Start serial communication
+  eeprom_object.eeprom_update_sensor();
   lcd_object.lcd_setup();             // Initialize LCD
   buttonClass_object.button_setup();  // Initialize button module
   buzzerclass_object.buzzer_setup();  // Initialize buzzer module

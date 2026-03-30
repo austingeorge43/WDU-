@@ -77,7 +77,7 @@ void process:: variant_settings()      // Calculations for Process time and Seco
 
         case 250:                        // For 2.5 Liters
             // pre_end_time = 25;
-            pre_end_time = 11*144;  //26.4 minutes
+            pre_end_time = (11*144)+60;  //26.4 minutes
             end_time = ((final_calb*2.4)*60) + 60;//----end_time in seconds
             // end_time = 25;
         break;

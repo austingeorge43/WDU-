@@ -289,8 +289,8 @@ void lcdclass::lcd_display()
             process_object.error_check();
             if(!error_check_flag && !temp_drop_flag)
             {
-            process_flag=1;
-            process_object.process_start();
+                process_flag=1;
+                process_object.process_start();
             }
         break;
 

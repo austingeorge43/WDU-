@@ -9,6 +9,7 @@
     void eeprom_dataread();
     void eeprom_datawrite();
     void eeprom_defaultvalue();
+    void eeprom_update_sensor();
 
     void eeprom_product_selection();
     void eeprom_subproduct_selection();
