@@ -85,7 +85,7 @@ void lcdclass::lcd_display()
             digitalWrite(GREEN_LED,LOW);
             digitalWrite(RED_LED,LOW);
             lcd.setCursor(0,0);
-            lcd.print(" SELECT VOLUME");     
+            lcd.print(" SELECT VOLUME   ");     
             lcd.setCursor(3,1);
             lcd.print(counter,1);
             if(counter<10.0){
