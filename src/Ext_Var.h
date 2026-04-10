@@ -8,6 +8,7 @@
 #include <OneButton.h>
 #include <EEPROM.h>
 #include "Ticker.h"
+#include <Wire.h>
 
 #include "Button.h"
 #include "Lcd_Display.h"

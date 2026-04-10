@@ -19,9 +19,14 @@ bool pauseflag=0;              // Pauses process timer
 /*================ System Initialization ================*/
 void setup() {
 
-  Serial3.begin(9600);                // Start serial communication
+  lcd_object.lcd_setup(); 
+
+  Serial3.begin(9600); 
+  Serial3.println("BOOT");
+              // Initialize LCD
+                // Start serial communication
   eeprom_object.eeprom_update_sensor();// Update EEPROM with Sensors default values
-  lcd_object.lcd_setup();             // Initialize LCD
+  
   buttonClass_object.button_setup();  // Initialize button module
   buzzerclass_object.buzzer_setup();  // Initialize buzzer module
   process_object.process_setup();     // Initialize process control

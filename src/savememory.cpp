@@ -23,7 +23,7 @@ void eepromclass::eeprom_defaultvalue()                 // Factory Reset Conditi
     calibration_value=0.0;
     solenoidoverride=1;
     flowoverride=0;
-    Heatersafteytemp=100;
+    Heatersafteytemp=90;
     eeprom_object.eeprom_datawrite();
 
 }

@@ -37,20 +37,32 @@ void toggle_screen()
 
 void lcdclass::lcd_setup()
 {
-    Wire.begin();              // Initialize the I2C bus
-    Wire.setClock(100000);     // Set I2C clock speed to 100 kHz (standard speed)
+    Wire.begin();
+    // Wire.setClock(100000);
     lcd.backlight();
+    // lcd.clear();
+    // delay(5000);
+    
+    // lcd.clear();
     lcd.init();
-    lcd.clear();
-    lcd.begin(16,2);
-    lcd.noAutoscroll();        // Disable auto-scrolling
-    error_blink.start();
-    pinMode(RED_LED,OUTPUT);
-    pinMode(GREEN_LED,OUTPUT);
-    pinMode(YELLOW_LED,OUTPUT);
+    // lcd.clear();
+    // lcd.backlight();
+    // lcd.clear();
+    
+    delay(100);
+    // lcd.noBacklight();
+    lcd.print(" SELECT VOLUME   ");
+    lcd.noAutoscroll();
 
-    variant=((prodtype[prodtypecounter])/10);
-    screen=VersionScreen;
+
+    error_blink.start();
+
+    pinMode(RED_LED, OUTPUT);
+    pinMode(GREEN_LED, OUTPUT);
+    pinMode(YELLOW_LED, OUTPUT);
+
+    variant = ((prodtype[prodtypecounter]) / 10);
+    screen = VersionScreen;
 }
 
 void lcdclass:: lcd_blink_update()
@@ -67,8 +79,21 @@ void lcdclass::lcd_display()
         case VersionScreen:
             lcd.setCursor(0,0);
             lcd.print("LABQUEST BOROSIL");
-            lcd.setCursor(3,1);
-            lcd.print("WDU V3.00");
+            lcd.setCursor(1,1);
+            if(dduflag)
+            {
+                lcd.print("DDU ");// V3.00");
+                lcd.print(prodtype[prodtypecounter]);
+                lcd.print(" V3.00");
+            }
+            else
+            {
+                lcd.print("SDU ");// V3.00");
+                lcd.print(prodtype[prodtypecounter]);
+                lcd.print(" V3.00");
+
+            }
+            // lcd.print("WDU V3.00");
             digitalWrite(BUZZER,HIGH);
             buzzerclass_object.Buzzer_beep(1000);
             buzzerclass_object.Buzzer_start();
@@ -326,7 +351,9 @@ void lcdclass::lcd_display()
             lcd.setCursor(0,1);
             lcd.print("TEMP: ");
             lcd.print(Heatersafteytemp);
-            lcd.print(" C  ");
+            lcd.print(" ");
+            lcd.print((char)223);
+            lcd.print("C  ");
         break;
 
         case ProbeCalibrationSettings:

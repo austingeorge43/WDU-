@@ -1,304 +1,401 @@
 #include <Arduino.h>
 #include "Ext_Var.h"
 
-#define MAX_SAFETY_TEMP 200
-#define MIN_SAFETY_TEMP 50
-#define SAFETY_TEMP_STEP 1
-#define PROBE_CALIBRATION_LIMIT 20
+// ---------------- SAFETY LIMIT DEFINITIONS ----------------
+#define MAX_SAFETY_TEMP 200          // Maximum allowed heater safety temperature
+#define MIN_SAFETY_TEMP 50           // Minimum allowed heater safety temperature
+#define SAFETY_TEMP_STEP 1           // Step increment/decrement for safety temperature
+#define PROBE_CALIBRATION_LIMIT 20   // Max +/- limit for probe calibration error
 
-#define RED_LED 17 //HELLO
-#define YELLOW_LED 39
-#define GREEN_LED 38
+// ---------------- LED PIN DEFINITIONS ----------------
+#define RED_LED 17       //Heater ON indication LED
+#define YELLOW_LED 39    // Standby / Warning indication LED
+#define GREEN_LED 38     // Settings indication LED 
 
-#define OPERATING_TIME 4
+// ---------------- PROCESS CONFIGURATION ----------------
+#define OPERATING_TIME 4   // Base operating time factor used for max volume calculation
 
-float counter=0.0;
-float calibration_value=3.0;
-float speed=0.5;
-float Max_liter=0.0;
-float temp_error=0.0;
-long start_tt=0;
-// float speed=1.0;
-bool but1=0;
-bool mainscreenflag=0;
-bool usersettings=0;
-bool servicemenu=0;
-bool uppointer=0;
-bool downpointer=0;
-bool inmenu=0;
-bool secondaryyes=0;
-bool solenoidoverride=1;
-bool flowoverride=0;
-bool speedup=0;
-bool secondarytimerflag=0;
+// ---------------- GLOBAL VARIABLES ----------------
 
-bool factoryresetflag=1;
+// Volume control
+float counter = 0.0;            // User-selected output volume (in liters)
+float Max_liter = 0.0;          // Maximum allowable volume based on variant
 
-bool leveloverride=0;
-bool probeoverride=0;
-bool time_skip=0;
+// Calibration & tuning
+float calibration_value = 3.0;  // Calibration offset for system
+float temp_error = 0.0;         // Probe temperature error adjustment
+float speed = 0.5;              // Reserved / adjustable speed parameter
 
-uint8_t skip_count=0;
-uint8_t longpress_count=0;
-int Heatersafteytemp=100;
+// Timing
+long start_tt = 0;              // Used for detecting long press (UP + DOWN combo)
 
+// ---------------- BUTTON & UI STATE FLAGS ----------------
+bool dualPressActive = 0;                  // Helper flag for dual button press detection
 
-// bool in_usersettings=0;
+bool mainscreenflag = 0;        // Indicates Main Screen is active
+bool usersettings = 0;          // Indicates User Settings menu is active
+bool servicemenu = 0;           // Indicates Service Menu is active
+bool inmenu = 0;                // Indicates user is inside a submenu
 
-//Button Pins
+// Pointer control for menu navigation
+bool uppointer = 0;             // Pointer on upper option
+bool downpointer = 0;           // Pointer on lower option
+
+// ---------------- FEATURE FLAGS ----------------
+bool secondaryyes = 0;          // Secondary fill option enable/disable
+bool solenoidoverride = 1;      // Solenoid override control
+bool flowoverride = 0;          // Flow sensor override
+bool leveloverride = 0;         // Level sensor override
+bool probeoverride = 0;         // Temperature probe override
+
+bool speedup = 0;               // Reserved for speed control feature
+bool secondarytimerflag = 0;    // Indicates secondary fill timer is running
+bool time_skip = 0;             // Used to skip time during secondary process
+
+// ---------------- FACTORY RESET ----------------
+bool factoryresetflag = 1;      // Confirmation flag for factory reset
+
+// ---------------- COUNTERS ----------------
+uint8_t skip_count = 0;         // Counter used for time skip logic
+uint8_t longpress_count = 0;    // Counter for smooth long press increment/decrement
+
+// ---------------- SAFETY PARAMETERS ----------------
+int Heatersafteytemp = 90;     // Current heater safety temperature setting
+
+// ---------------- BUTTON PIN DEFINITIONS ----------------
 #define UP 35
 #define DOWN 32
 #define BACK 26
 #define MODE 36
 
-
+// ---------------- BUTTON OBJECTS ----------------
+// Using OneButton library for handling click & long press events
 OneButton up_button(UP, true);
 OneButton down_button(DOWN, true);
 OneButton back_button(BACK, true);
 OneButton mode_button(MODE, true);
 
-//DEFINATION
-
-buttonClass:: buttonClass()
-{}
-
-void buttonClass:: button_setup()
+// ---------------- CLASS CONSTRUCTOR ----------------
+buttonClass::buttonClass()
 {
-    pinMode(UP,INPUT_PULLUP);
-    pinMode(DOWN,INPUT_PULLUP);
-    pinMode(BACK,INPUT_PULLUP);
-    pinMode(MODE,INPUT_PULLUP);
+    // Constructor currently does nothing
+}
+
+// ---------------- BUTTON INITIALIZATION ----------------
+void buttonClass::button_setup()
+{
+    // Configure button pins with internal pull-up resistors
+    pinMode(UP, INPUT_PULLUP);
+    pinMode(DOWN, INPUT_PULLUP);
+    pinMode(BACK, INPUT_PULLUP);
+    pinMode(MODE, INPUT_PULLUP);
     
-    up_button.attachClick(increment);
-    up_button.attachDuringLongPress(long_press_up);
-    down_button.attachClick(decrement);
-    down_button.attachDuringLongPress(long_press_down);
-    mode_button.attachDuringLongPress(user_settings);
-    mode_button.attachClick(enter_function);
-    back_button.attachClick(back_screen);
-    back_button.setPressMs(1000);
-    back_button.attachDuringLongPress(back_to_home);
-    
-//  
+    // -------- BUTTON EVENT ATTACHMENTS --------
+
+    // UP button
+    up_button.attachClick(increment);                 // Short press → Increment value / move up
+    up_button.attachDuringLongPress(long_press_up);   // Long press → Continuous increment
+
+    // DOWN button
+    down_button.attachClick(decrement);               // Short press → Decrement value / move down
+    down_button.attachDuringLongPress(long_press_down);// Long press → Continuous decrement
+
+    // MODE button
+    mode_button.attachDuringLongPress(user_settings); // Long press → Enter User Settings
+    mode_button.attachClick(enter_function);          // Short press → Enter / Confirm action
+
+    // BACK button
+    back_button.attachClick(back_screen);             // Short press → Go back one screen
+    back_button.setPressMs(1000);                     // Long press threshold (1 second)
+    back_button.attachDuringLongPress(back_to_home);  // Long press → Return to main screen
+
+    // Note:
+    // BACK long press acts as a "hard reset" to main UI state
 }
 
-void buttonClass:: button_ticks()
+// ---------------- BUTTON EVENT PROCESSING ----------------
+// This function must be called repeatedly inside loop()
+// It updates the state of all buttons (click / long press detection)
+void buttonClass::button_ticks()
 {
-    up_button.tick();
-    down_button.tick();
-    mode_button.tick();
-    back_button.tick();
+    up_button.tick();     // Process UP button events
+    down_button.tick();   // Process DOWN button events
+    mode_button.tick();   // Process MODE button events
+    back_button.tick();   // Process BACK button events
 }
 
-void buttonClass :: setPointer(uint8_t col,uint8_t row)
+// ---------------- POINTER DISPLAY FUNCTION ----------------
+// Displays '>' symbol at given LCD position
+void buttonClass::setPointer(uint8_t col, uint8_t row)
 {
-    lcd.clear();              // Clear screen
-    lcd.setCursor(col, row);  // Set position
-    lcd.print(">");           // Print pointer
+    lcd.clear();              // Clear entire LCD 
+    lcd.setCursor(col, row);  // Move cursor to specified position
+    lcd.print(">");           // Print selection pointer
 }
 
-void buttonClass:: but_check()//------------------------------UP DOWN Key Long Press detection
+// ---------------- DUAL BUTTON LONG PRESS (UP + DOWN) ----------------
+// Detects simultaneous press of UP and DOWN buttons
+// If held for defined duration → enters Service Menu
+void buttonClass::but_check()
 {
-  if(digitalRead(UP)== LOW && digitalRead(DOWN) == LOW && but1 == 0)//----------Check for button press
-  {
-    start_tt = millis();//-------if both keys are pressed start the time calculation
-    but1 = 1;
-  }
-  else if(digitalRead(UP)== LOW && digitalRead(DOWN) == LOW && but1 == 1)//--------Check for button is continously pressed
-  {
-    if((millis() - start_tt) >= 1000)//-------------------after 3 sec completion
+    // -------- STEP 1: Detect initial simultaneous press --------
+    if (digitalRead(UP) == LOW && digitalRead(DOWN) == LOW && dualPressActive == 0)
     {
-        lcd.clear();
-        screen=ServiceMenuScreen1;//------------Go to service menu mode.
-        servicemenu=1;
-        mainscreenflag=0;
-        uppointer=1;
-        downpointer=0;
-        setPointer(0,0);
-        digitalWrite(BUZZER,HIGH);
+        start_tt = millis();  // Record start time of press
+        dualPressActive = 1;             // Mark that dual press has started
+    }
+
+    // -------- STEP 2: Check if buttons are still held --------
+    else if (digitalRead(UP) == LOW && digitalRead(DOWN) == LOW && dualPressActive == 1)
+    {
+        // Check if hold duration exceeded threshold
+        if ((millis() - start_tt) >= 1000)   // 1000 ms = 1 second
+        {
+            // -------- ENTER SERVICE MENU --------
+            lcd.clear();
+
+            screen = ServiceMenuScreen1; // Switch to first service menu screen
+            servicemenu = 1;             // Activate service menu mode
+            mainscreenflag = 0;          // Exit main screen
+
+            // Set pointer to first option
+            uppointer = 1;
+            downpointer = 0;
+            setPointer(0, 0);
+
+            // Provide user feedback via buzzer
+            digitalWrite(BUZZER, HIGH);
+            buzzerclass_object.Buzzer_beep(1000);
+            buzzerclass_object.Buzzer_start();
+
+            return; // Exit after triggering action
+        }
+    }
+
+    // -------- STEP 3: Reset if buttons released --------
+    else if (dualPressActive == 1)
+    {
+        // If either button is released → cancel detection
+        if (digitalRead(UP) == HIGH || digitalRead(DOWN) == HIGH)
+        {
+            dualPressActive = 0; // Reset dual press flag
+        }
+    }
+}
+
+// ---------------- BACK TO HOME (LONG PRESS BACK BUTTON) ----------------
+// This function performs a "hard reset" of the UI and process state.
+// It stops all operations, resets flags, and returns to Main Screen.
+// Also handles error condition routing based on override settings.
+
+void buttonClass::back_to_home()
+{
+    // Execute only if NOT already on main screen AND tap is not closed
+    if (!mainscreenflag && !closetap)
+    {
+        lcd.clear();  // Clear display
+
+        // -------- USER FEEDBACK (BUZZER) --------
+        digitalWrite(BUZZER, HIGH);
         buzzerclass_object.Buzzer_beep(1000);
         buzzerclass_object.Buzzer_start();
-        return;
+
+        // -------- RESET SYSTEM STATES --------
+        mainscreenflag = 1;      // Return to main screen
+        process_flag = 0;        // Stop process execution
+        temp_drop_flag = 0;      // Reset temperature drop logic
+        inmenu = 0;              // Exit any submenu
+        secondarytimerflag = 0;  // Stop secondary timer
+
+        // -------- STOP HARDWARE OPERATIONS --------
+        process_object.heater1_stop();     // Stop heater
+        buzzerclass_object.heater_stop();  // Stop buzzer-related heater logic
+
+        digitalWrite(SOLENOID1, LOW);  // Close solenoid 1
+        digitalWrite(SOLENOID2, LOW);  // Close solenoid 2
+
+        // -------- RESTORE SETTINGS FROM EEPROM --------
+        eeprom_object.eeprom_dataread();
+
+        // Default screen → Main Screen
+        screen = MainScreen;
+
+        // -------- ERROR HANDLING LOGIC --------
+        // If solenoid override is OFF and not in settings/menu,
+        // force system into error screen for safety validation
+        if (!solenoidoverride && !usersettings && !servicemenu)
+        {
+            Probe1_Err = 0;
+            waterlevel_error_flag = 0;
+            flow_error_checkflag = 0;
+
+            closetap = 1;          // Mark tap as closed
+            error_check_flag = 1;  // Trigger error check
+
+            screen = ErrorScreen;  // Redirect to error screen
+        }
+        else
+        {
+            // Normal return to main screen
+            usersettings = 0;
+            servicemenu = 0;
+            screen = MainScreen;
+        }
     }
-  }
-  else if(but1 == 1)
-  {
-    if(digitalRead(UP)== HIGH || digitalRead(DOWN) == HIGH)
-    {
-      but1 = 0;
-    }
-  }
 }
 
-void buttonClass:: back_to_home()
-{
-    if(!mainscreenflag  && !closetap){
-    lcd.clear();
-    digitalWrite(BUZZER,HIGH);
-    buzzerclass_object.Buzzer_beep(1000);
-    buzzerclass_object.Buzzer_start();
-    
-    // usersettings=0;
-    // servicemenu=0;
-    mainscreenflag=1;
-    process_flag=0;
-    temp_drop_flag=0;
-    inmenu=0;
-    secondarytimerflag=0;
-    process_object.heater1_stop();
-    buzzerclass_object.heater_stop();
-    digitalWrite(SOLENOID1,LOW);
-    digitalWrite(SOLENOID2,LOW);
-    eeprom_object.eeprom_dataread();
-    screen=MainScreen;
-    if(!solenoidoverride && !usersettings && !servicemenu  ) 
-    {
-         Probe1_Err=0;
-        waterlevel_error_flag=0;
-        flow_error_checkflag=0;
-        closetap=1;
-        error_check_flag=1;
-        screen=ErrorScreen;
-        // screen=MainScreen;
-    }
-    else
-    {
-
-        usersettings=0;
-        servicemenu=0;
-        screen=MainScreen;
-        // Probe1_Err=0;
-        // waterlevel_error_flag=0;
-        // flow_error_checkflag=0;
-        // closetap=1;
-        // error_check_flag=1;
-        // screen=ErrorScreen;
-
-    }  
-    
-    }
-
-}
+// ---------------- LONG PRESS UP BUTTON ----------------
+// Handles continuous increment when UP button is held
+// Uses longpress_count to control increment speed (non-blocking)
 
 void buttonClass::long_press_up()
 {
-    if(digitalRead(DOWN)==HIGH)
+    // Prevent conflict: only act if DOWN button is NOT pressed
+    if (digitalRead(DOWN) == HIGH)
     {
-        if(mainscreenflag)
+        // -------- MAIN SCREEN: INCREASE VOLUME --------
+        if (mainscreenflag)
         {
-            Max_liter=(2*OPERATING_TIME)*(variant/10.0);
-            if(counter<Max_liter)
-            {
-                longpress_count++;
-                if(longpress_count==4)
-                {
-                    counter+=0.5;
-                    longpress_count=0;
-                }
-            }
-        }
-    
+            // Calculate maximum allowed volume
+            Max_liter = (2 * OPERATING_TIME) * (variant / 10.0);
 
-        if(screen==CalibrationSettings)
-        {
-            Max_liter=(2*OPERATING_TIME)*(variant/10.0);
-            if(calibration_value<Max_liter)
+            if (counter < Max_liter)
             {
-                longpress_count++;
-                if(longpress_count==3)
+                longpress_count++;  // Increment counter for smooth stepping
+
+                // Increase value every 4 cycles
+                if (longpress_count == 4)
                 {
-                    calibration_value+=0.1;
-                    longpress_count=0;
+                    counter += 0.5;
+                    longpress_count = 0;  // Reset counter
                 }
-            }
-        }
-    
-        if(screen==SafteyTemperatureSettings)
-        {
-            if(Heatersafteytemp<MAX_SAFETY_TEMP)
-            {
-            longpress_count++;
-            if(longpress_count==5)
-            {
-                Heatersafteytemp+=SAFETY_TEMP_STEP;
-                longpress_count=0;
-            }
             }
         }
 
-        if(screen==ProbeCalibrationSettings)
+        // -------- CALIBRATION SETTINGS --------
+        if (screen == CalibrationSettings)
         {
-            if(temp_error<=PROBE_CALIBRATION_LIMIT)
+            Max_liter = (2 * OPERATING_TIME) * (variant / 10.0);
+
+            if (calibration_value < Max_liter +5)
             {
                 longpress_count++;
-                if(longpress_count==5)
+
+                // Faster increment (every 3 cycles)
+                if (longpress_count == 3)
                 {
-                    temp_error+=0.1;
-                    longpress_count=0;
+                    calibration_value += 0.1;
+                    longpress_count = 0;
                 }
-            
+            }
+        }
+
+        // -------- SAFETY TEMPERATURE SETTINGS --------
+        if (screen == SafteyTemperatureSettings)
+        {
+            if (Heatersafteytemp < MAX_SAFETY_TEMP)
+            {
+                longpress_count++;
+
+                // Slower increment (every 5 cycles for safety)
+                if (longpress_count == 5)
+                {
+                    Heatersafteytemp += SAFETY_TEMP_STEP;
+                    longpress_count = 0;
+                }
+            }
+        }
+
+        // -------- PROBE CALIBRATION SETTINGS --------
+        if (screen == ProbeCalibrationSettings)
+        {
+            if (temp_error <= PROBE_CALIBRATION_LIMIT)
+            {
+                longpress_count++;
+
+                // Controlled increment (every 5 cycles)
+                if (longpress_count == 5)
+                {
+                    temp_error += 0.1;
+                    longpress_count = 0;
+                }
             }
         }
     }
-
 }
+
+// ---------------- LONG PRESS DOWN BUTTON ----------------
+// Handles continuous decrement when DOWN button is held
+// Mirror logic of long_press_up()
 
 void buttonClass::long_press_down()
 {
-    if(digitalRead(UP)==HIGH)
+    // Prevent conflict: only act if UP button is NOT pressed
+    if (digitalRead(UP) == HIGH)
     {
-        if(counter>=0.5)
+        // -------- MAIN SCREEN: DECREASE VOLUME --------
+        if (counter >= 0.5)
         {
-            if(mainscreenflag)
+            if (mainscreenflag)
             {
                 longpress_count++;
-                if(longpress_count==4)
+
+                // Decrease every 4 cycles
+                if (longpress_count == 4)
                 {
-                    counter-=0.5;
-                    longpress_count=0;
-                }
-            }
-        }
-        if(screen==CalibrationSettings)
-        {
-            if(calibration_value>0.1)
-            {
-                longpress_count++;
-                if(longpress_count==3)
-                {
-                    calibration_value-=0.1;
-                    longpress_count=0;
+                    counter -= 0.5;
+                    longpress_count = 0;
                 }
             }
         }
 
-        if(screen==SafteyTemperatureSettings)
+        // -------- CALIBRATION SETTINGS --------
+        if (screen == CalibrationSettings)
         {
-            if(Heatersafteytemp > MIN_SAFETY_TEMP)
-            {
-            longpress_count++;
-            if(longpress_count==5)
-            {
-                Heatersafteytemp-= SAFETY_TEMP_STEP;
-                longpress_count=0;
-            }
-            }
-        }
-       if(screen==ProbeCalibrationSettings)
-       {
-            if(temp_error>=-(PROBE_CALIBRATION_LIMIT))
+            if (calibration_value > 0.1)
             {
                 longpress_count++;
-                if(longpress_count==5)
+
+                if (longpress_count == 3)
                 {
-                    temp_error-=0.1;
-                    longpress_count=0;
+                    calibration_value -= 0.1;
+                    longpress_count = 0;
                 }
-                
+            }
+        }
+
+        // -------- SAFETY TEMPERATURE SETTINGS --------
+        if (screen == SafteyTemperatureSettings)
+        {
+            if (Heatersafteytemp > MIN_SAFETY_TEMP)
+            {
+                longpress_count++;
+
+                if (longpress_count == 5)
+                {
+                    Heatersafteytemp -= SAFETY_TEMP_STEP;
+                    longpress_count = 0;
+                }
+            }
+        }
+
+        // -------- PROBE CALIBRATION SETTINGS --------
+        if (screen == ProbeCalibrationSettings)
+        {
+            if (temp_error >= -(PROBE_CALIBRATION_LIMIT))
+            {
+                longpress_count++;
+
+                if (longpress_count == 5)
+                {
+                    temp_error -= 0.1;
+                    longpress_count = 0;
+                }
             }
         }
     }
 }
+
 void buttonClass::increment()
 {
     // -------- MAIN SCREEN: INCREASE OUTPUT VOLUME --------
@@ -1240,11 +1337,9 @@ void buttonClass:: back_screen()
             break;
 
             case FactoryResetScreen:
-                // lcd.clear();
+
                 uppointer=0;
                 downpointer=1;
-                // lcd.setCursor(0,1);
-                // lcd.print(">");
                 servicemenu=1;
                 buttonClass_object.setPointer(0,1);
                if(dduflag)
@@ -1271,7 +1366,7 @@ void buttonClass::enter_function()
         return;
     }
 
-    if(mainscreenflag)
+    if(mainscreenflag && counter>0.0)
     {
         process_object.variant_settings();
         
@@ -1315,7 +1410,7 @@ void buttonClass::enter_function()
     }
 
         if(inmenu)
-    {
+        {
         
         // usersettings=1;
         // servicemenu=1;
