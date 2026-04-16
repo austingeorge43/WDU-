@@ -319,6 +319,14 @@ void lcdclass::lcd_display()
             }
         break;
 
+        case PrimaryFillScreen:
+            lcd.setCursor(0,0);
+            lcd.print("PRIMARY BOILER   ");
+            lcd.setCursor(0,1);
+            lcd.print("FILLING...      ");
+            process_object.error_check();
+        break;
+
         case SecondaryFillTimer:
             process_object.error_check();
             lcd.setCursor(0,0);
@@ -394,7 +402,17 @@ void lcdclass::lcd_display()
                 digitalWrite(RED_LED,LOW);
                 if(toggle)
                 {
-                    if(closetap)
+                    // if(zero_calib)
+                    // {
+                    //     digitalWrite(BUZZER,HIGH);
+                    //     digitalWrite(YELLOW_LED,HIGH);
+                    //     lcd.setCursor(0,0);
+                    //     lcd.print(" CALIB MISSING!     ");
+                    //     lcd.setCursor(0,1);
+                    //     lcd.print("SET CALIBRATION   ");
+                    // }
+
+                    if(closetap && !zero_calib)
                     {
                         digitalWrite(BUZZER,HIGH);
                         digitalWrite(YELLOW_LED,HIGH);
@@ -405,14 +423,14 @@ void lcdclass::lcd_display()
                         
                     }
 
-                    if(flow_error_checkflag)
+                    if(flow_error_checkflag && !zero_calib)
                     {
                         digitalWrite(BUZZER,HIGH);
                         digitalWrite(YELLOW_LED,HIGH);
                         lcd.setCursor(0,0);
                         lcd.print("NO WATER SUPPLY  ");
                         lcd.setCursor(0,1);
-                        lcd.print("   CHECK TAP");
+                        lcd.print("CHECK WATER TAP");
                         
                         if(solenoid_stop == 0)
                         {
@@ -429,16 +447,16 @@ void lcdclass::lcd_display()
                         }
                     }
 
-                    if(waterlevel_error_flag  && !flow_error_checkflag)
+                    if(waterlevel_error_flag  && !flow_error_checkflag && !zero_calib)
                     {
                         digitalWrite(BUZZER,HIGH);
                         digitalWrite(YELLOW_LED,HIGH);
                         lcd.setCursor(0,0);
-                        lcd.print("PRI.BOILER EMPTY");
+                        lcd.print("  CHECK WATER");
                         lcd.setCursor(0,1);
-                        lcd.print("CHECK FEED WATER");
+                        lcd.print("  LEVEL SENSOR");
                     }
-                    if(Probe1_Err && !flow_error_checkflag && !waterlevel_error_flag)
+                    if(Probe1_Err && !flow_error_checkflag && !waterlevel_error_flag && !zero_calib)
                     {
                         digitalWrite(BUZZER,HIGH);
                         digitalWrite(YELLOW_LED,HIGH);
@@ -464,29 +482,35 @@ void lcdclass::lcd_display()
             else
             {
                 lcd.clear();
+                primary_filling_flag=0;
                 digitalWrite(BUZZER,LOW);
                 digitalWrite(YELLOW_LED,LOW);
                 if(secondarytimerflag)
                 {
+                    digitalWrite(BUZZER,LOW);
                     screen=SecondaryFillTimer;
-                    process_object.heater1_start();
+                    process_object.Contactor1_start();
                 }
                 else if(process_flag)
                 {
+                    digitalWrite(BUZZER,LOW);
                     screen=ProcessScreen;
-                    process_object.heater1_start();
-                    if(dduflag)
-                    {
-                        buzzerclass_object.heater_start();
-                    }
+                    process_object.Contactor1_start();
+                    // if(dduflag)
+                    // {
+                    //     buzzerclass_object.heater_start();
+                    // }
                 }
                 else
                 {
+                    digitalWrite(BUZZER,LOW);
                     screen=MainScreen;
                     mainscreenflag=1;
-                    Serial3.println("1");
+                    // Serial3.println("1");
                 }
+                digitalWrite(BUZZER,LOW);
             }
+
             if(!closetap  && (process_flag || secondarytimerflag))
             {
             process_object.error_check();

@@ -21,8 +21,12 @@ void setup() {
 
   lcd_object.lcd_setup(); 
 
+  // eeprom_object.eeprom_defaultvalue();
+  // eeprom_object.eeprom_datawrite();
+
+
   Serial3.begin(9600); 
-  Serial3.println("BOOT");
+  // Serial3.println("BOOT");
               // Initialize LCD
                 // Start serial communication
   eeprom_object.eeprom_update_sensor();// Update EEPROM with Sensors default values
@@ -68,7 +72,7 @@ ISR(TCA0_OVF_vect)
     if (time_counter >= 80)           // Check if ~1 second elapsed
     {
       one_second_counter++;           // Increment process seconds
-      Serial3.println(one_second_counter); // Debug print
+      // Serial3.println(one_second_counter); // Debug print
       time_counter=0;                 // Reset process counter
     }
   }
@@ -85,6 +89,7 @@ void loop() {
   buzzerclass_object.buzzer_update(); // Update buzzer state,Secondary heater start and stop ticker
   // buzzerclass_object.Buzzer_update();
   lcd_object.lcd_blink_update();      // Update LCD blinking during Error page
+  process_object.ticker_update();     // Update process-related timers
   PT100_object.read_temperature();    // Read temperature from sensor
   // Serial3.println("1");
 

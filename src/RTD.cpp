@@ -60,8 +60,8 @@ void PT100::read_temperature()
 
         Heater_temp = ((Rt / R0) - 1) / Alpha;
         calib_Heater1 = Heater_temp + temp_error;
-        Serial3.print("Heater Temp: ");
-        Serial3.println(calib_Heater1);
+        // Serial3.print("Heater Temp: ");
+        // Serial3.println(calib_Heater1);
         
         // PT100_object.PT100_error_check();
 
@@ -112,8 +112,8 @@ void PT100::PT100_error_check()
             if (Probe1_Err == 1)
             {
                 probe1_ok_cnt++;
-                Serial3.print("Probe OK Count: ");
-                Serial3.println(probe1_ok_cnt);
+                // Serial3.print("Probe OK Count: ");
+                // Serial3.println(probe1_ok_cnt);
 
                 if (probe1_ok_cnt >= PROBE_OK_STABLE_COUNT)
                 {

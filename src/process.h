@@ -20,6 +20,13 @@ class process
     void Solenoid1_stop();
     void Solenoid2_stop();
 
+    void Contactor1_start();
+    void Contactor1_stop();
+    void Contactor2_start();    
+    void Contactor2_stop();
+    
+    void ticker_update();
+
 };
 
 extern process process_object;

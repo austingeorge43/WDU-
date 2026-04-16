@@ -25,6 +25,7 @@ float Max_liter = 0.0;          // Maximum allowable volume based on variant
 float calibration_value = 3.0;  // Calibration offset for system
 float temp_error = 0.0;         // Probe temperature error adjustment
 float speed = 0.5;              // Reserved / adjustable speed parameter
+bool zero_calib = 0;             // Flag to indicate zero calibration condition
 
 // Timing
 long start_tt = 0;              // Used for detecting long press (UP + DOWN combo)
@@ -208,8 +209,9 @@ void buttonClass::back_to_home()
         secondarytimerflag = 0;  // Stop secondary timer
 
         // -------- STOP HARDWARE OPERATIONS --------
-        process_object.heater1_stop();     // Stop heater
-        buzzerclass_object.heater_stop();  // Stop buzzer-related heater logic
+        process_object.heater1_stop();
+        // process_object.heater1_stop();     // Stop heater
+        // buzzerclass_object.heater_stop();  // Stop buzzer-related heater logic
 
         digitalWrite(SOLENOID1, LOW);  // Close solenoid 1
         digitalWrite(SOLENOID2, LOW);  // Close solenoid 2
@@ -219,6 +221,13 @@ void buttonClass::back_to_home()
 
         // Default screen → Main Screen
         screen = MainScreen;
+
+        waterlevel_error_flag=0;
+        flow_error_checkflag=0;
+        primary_filling_flag=0;
+        error_check_flag=0;
+        pauseflag=0;
+        //probeerrorflag=0;
 
         // -------- ERROR HANDLING LOGIC --------
         // If solenoid override is OFF and not in settings/menu,
@@ -1366,11 +1375,32 @@ void buttonClass::enter_function()
         return;
     }
 
+    // if(error_check_flag && zero_calib)
+    // {
+    //     lcd.clear();
+    //     mainscreenflag=0;
+    //     error_check_flag=0;
+    //     zero_calib=0;
+    //     screen=CalibrationSettings;
+    //     servicemenu = 1;
+    //     inmenu=1;
+    //     digitalWrite(BUZZER,LOW);
+    //     return;
+    // }
+
     if(mainscreenflag && counter>0.0)
     {
+        // if(calibration_value<=0.0)
+        // {
+        //     zero_calib=1;
+        //     error_check_flag=1;
+        //     screen=ErrorScreen;
+        //     return;
+        // }
+
         process_object.variant_settings();
         
-        Serial3.println("BUZZZZZZZZZZZER");
+        // Serial3.println("BUZZZZZZZZZZZER");
         digitalWrite(BUZZER,HIGH);
         
         buzzerclass_object.Buzzer_beep(1000);
@@ -1386,7 +1416,7 @@ void buttonClass::enter_function()
             secondarytimerflag=1;
             pauseflag=0;
             error_check_flag=0;
-            process_object.heater1_start();
+            process_object.Contactor1_start();
         }
         else
         {
@@ -1401,10 +1431,12 @@ void buttonClass::enter_function()
             {
                 return;
             }
-            process_object.heater1_start();
-            if(dduflag){
-            buzzerclass_object.heater_start();
-            }
+            process_object.Contactor1_start();
+
+            // process_object.heater1_start();
+            // if(dduflag){
+            // buzzerclass_object.heater_start();
+            // }
         }
         return;
     }
@@ -1463,7 +1495,11 @@ void buttonClass::enter_function()
             case ProductTypeSettings:
                 screen=ServiceMenuScreen1;
                 servicemenu=1;
+                calibration_value=0.0;
                 EEPROM.write(PRODUCT_SELECTION, dduflag);
+                delay(50);
+                EEPROM.put(CALIBRATION_VALUE, calibration_value);
+                delay(50);
             break;
 
             case CalibrationSettings:
@@ -1504,6 +1540,10 @@ void buttonClass::enter_function()
                 EEPROM.put(SUBPRODUCT_SELECTION,prodtypecounter);
                 screen=ServiceMenuScreen2;
                 servicemenu=1;
+                calibration_value=0.0;
+                delay(50);
+                EEPROM.put(CALIBRATION_VALUE, calibration_value);
+                delay(50);
             break;
 
             case FactoryResetScreen:
