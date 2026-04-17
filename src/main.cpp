@@ -42,6 +42,8 @@ void setup() {
 
   eeprom_object.eeprom_dataread();    // Read saved EEPROM settings
 
+  Max_liter = (2 * OPERATING_TIME) * (variant / 10.0);
+
   cli();                              // Disable interrupts during timer setup
 
   TCA0.SINGLE.INTCTRL = TCA_SINGLE_OVF_bm;                           // Enable timer overflow interrupt

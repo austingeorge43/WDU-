@@ -33,6 +33,8 @@
 #define SOLENOID_CONTROL 21
 #define PROBE_CONTROL 23
 
+#define OPERATING_TIME 4   // Base operating time factor used for max volume calculation
+
 
 extern int prodtype[3];
 extern int  optime[4];

@@ -284,7 +284,7 @@ void buttonClass::long_press_up()
         // -------- CALIBRATION SETTINGS --------
         if (screen == CalibrationSettings)
         {
-            Max_liter = (2 * OPERATING_TIME) * (variant / 10.0);
+            // Max_liter = (2 * OPERATING_TIME) * (variant / 10.0);
 
             if (calibration_value < Max_liter +5)
             {
@@ -361,7 +361,7 @@ void buttonClass::long_press_down()
         // -------- CALIBRATION SETTINGS --------
         if (screen == CalibrationSettings)
         {
-            if (calibration_value > 0.1)
+            if (calibration_value > 0.0)
             {
                 longpress_count++;
 
@@ -371,6 +371,8 @@ void buttonClass::long_press_down()
                     longpress_count = 0;
                 }
             }
+            if(calibration_value < 0.0)
+                calibration_value = 0.0;
         }
 
         // -------- SAFETY TEMPERATURE SETTINGS --------
@@ -735,7 +737,7 @@ void buttonClass::increment()
         break;
 
         case CalibrationSettings:
-            Max_liter=(2*OPERATING_TIME)*(variant/10.0);
+            // Max_liter=(2*OPERATING_TIME)*(variant/10.0);
             if(calibration_value<Max_liter+5.0)
             {
                 calibration_value+=0.1;
@@ -1128,10 +1130,12 @@ case UserSettingsScreen4:
     break;
 
      case CalibrationSettings:
-        if(calibration_value>0.1)
+        if(calibration_value > 0.0)
         {
         calibration_value-=0.1;
         }
+        if(calibration_value < 0.0)
+            calibration_value = 0.0;
     break;
 
     case SafteyTemperatureSettings:
@@ -1343,6 +1347,7 @@ void buttonClass:: back_screen()
                 EEPROM.get(SUBPRODUCT_SELECTION,prodtypecounter);
                 screen=ServiceMenuScreen2;
                 servicemenu=1;
+                Max_liter = (2 * OPERATING_TIME) * (variant / 10.0);
             break;
 
             case FactoryResetScreen:
@@ -1375,28 +1380,29 @@ void buttonClass::enter_function()
         return;
     }
 
-    // if(error_check_flag && zero_calib)
-    // {
-    //     lcd.clear();
-    //     mainscreenflag=0;
-    //     error_check_flag=0;
-    //     zero_calib=0;
-    //     screen=CalibrationSettings;
-    //     servicemenu = 1;
-    //     inmenu=1;
-    //     digitalWrite(BUZZER,LOW);
-    //     return;
-    // }
+    if(error_check_flag && zero_calib)
+    {
+        lcd.clear();
+       
+        error_check_flag=0;
+        zero_calib=0;
+        screen=CalibrationSettings;
+        servicemenu = 1;
+        inmenu=1;
+        digitalWrite(BUZZER,LOW);
+        return;
+    }
 
     if(mainscreenflag && counter>0.0)
     {
-        // if(calibration_value<=0.0)
-        // {
-        //     zero_calib=1;
-        //     error_check_flag=1;
-        //     screen=ErrorScreen;
-        //     return;
-        // }
+        if(calibration_value == 0.0)
+        {
+            zero_calib=1;
+            mainscreenflag=0;
+            error_check_flag=1;
+            screen=ErrorScreen;
+            return;
+        }
 
         process_object.variant_settings();
         
@@ -1544,6 +1550,7 @@ void buttonClass::enter_function()
                 delay(50);
                 EEPROM.put(CALIBRATION_VALUE, calibration_value);
                 delay(50);
+                Max_liter = (2 * OPERATING_TIME) * (variant / 10.0);
             break;
 
             case FactoryResetScreen:

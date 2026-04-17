@@ -402,15 +402,16 @@ void lcdclass::lcd_display()
                 digitalWrite(RED_LED,LOW);
                 if(toggle)
                 {
-                    // if(zero_calib)
-                    // {
-                    //     digitalWrite(BUZZER,HIGH);
-                    //     digitalWrite(YELLOW_LED,HIGH);
-                    //     lcd.setCursor(0,0);
-                    //     lcd.print(" CALIB MISSING!     ");
-                    //     lcd.setCursor(0,1);
-                    //     lcd.print("SET CALIBRATION   ");
-                    // }
+                    if(zero_calib)
+                    {
+                        digitalWrite(BUZZER,HIGH);
+                        digitalWrite(YELLOW_LED,HIGH);
+                        lcd.setCursor(0,0);
+                        lcd.print(" CALIB MISSING!     ");
+                        lcd.setCursor(0,1);
+                        lcd.print("SET CALIBRATION   ");
+                        
+                    }
 
                     if(closetap && !zero_calib)
                     {
@@ -511,7 +512,7 @@ void lcdclass::lcd_display()
                 digitalWrite(BUZZER,LOW);
             }
 
-            if(!closetap  && (process_flag || secondarytimerflag))
+            if(!zero_calib && !closetap  && (process_flag || secondarytimerflag))
             {
             process_object.error_check();
             }
