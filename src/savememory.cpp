@@ -20,7 +20,8 @@ void eepromclass::eeprom_defaultvalue()                 // Factory Reset Conditi
     counter=0.0;
     dduflag=0;
     prodtypecounter=0;
-    calibration_value=0.0;
+    secondaryyes = 1;          // Secondary fill option enable/disable
+    calibration_value=1.4;    // Calibration value for 1.5L product, default product
     solenoidoverride=1;
     flowoverride=0;
     Heatersafteytemp=90;

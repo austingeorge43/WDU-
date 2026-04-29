@@ -6,6 +6,7 @@ class process
     public:
     process();
     void process_start();
+    void boiler_preheat();
     void error_check();
     void process_setup();
     void variant_settings();

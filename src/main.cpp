@@ -67,14 +67,15 @@ ISR(TCA0_OVF_vect)
     time_counter2=0;                  // Reset additional counter
   }
 
-  if((process_flag || secondarytimerflag) && !pauseflag) // Run timer when process active
+  if((process_flag || secondarytimerflag || preheat_flag) && !pauseflag) // Run timer when process active
   {
     time_counter++;                   // Increment process timer
 
     if (time_counter >= 80)           // Check if ~1 second elapsed
     {
       one_second_counter++;           // Increment process seconds
-      // Serial3.println(one_second_counter); // Debug print
+      Serial3.println(one_second_counter); // Debug print
+      // Serial3.println(pauseflag);
       time_counter=0;                 // Reset process counter
     }
   }

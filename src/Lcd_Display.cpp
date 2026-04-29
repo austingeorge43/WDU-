@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "Ext_Var.h"
 
+// LED and Buzzer Pins
 #define RED_LED 17 //HELLO
 #define YELLOW_LED 39
 #define GREEN_LED 38
@@ -23,7 +24,9 @@ unsigned long solenoid_stop=0;
 
 int optime[4]={6,8,10,12};
 int prodtype[3]={150,250,400};
+float base_calibration[3]={1.4,2.4,3.9};
 
+// Error blinking ticker for main screen
 Ticker error_blink(toggle_screen,500,0,MILLIS);
  
 //DEFINATIONS
@@ -34,7 +37,7 @@ void toggle_screen()
 {
     toggle=!toggle;
 }
-
+// -------- LCD INTIALIZATION --------
 void lcdclass::lcd_setup()
 {
     Wire.begin();
@@ -290,33 +293,50 @@ void lcdclass::lcd_display()
         
 
         case ProcessScreen:
-            lcd.setCursor(0,0);
-            digitalWrite(RED_LED,HIGH);
-            digitalWrite(YELLOW_LED,LOW);
-            lcd.print("PROCESS STARTED");
-            if ((one_second_counter - previous_time) >= time_per_step)
+            digitalWrite(YELLOW_LED,HIGH);
+            digitalWrite(RED_LED,LOW);
+            if(process_flag)
             {
-                previous_time = one_second_counter;
-                if (remaining_volume > 0)
+                lcd.setCursor(0,0);
+                // digitalWrite(RED_LED,HIGH);
+                // digitalWrite(YELLOW_LED,LOW);
+                lcd.print("PROCESS STARTED");
+            
+                if ((one_second_counter - previous_time) >= time_per_step)
                 {
-                    remaining_volume--;
-                      // Decrement 0.1L
+                    previous_time = one_second_counter;
+                    if (remaining_volume > 0)
+                    {
+                        remaining_volume--;
+                        // Decrement 0.1L
+                    }
                 }
-            }
-
-            lcd.setCursor(3,1);
-            lcd.print(remaining_volume/10);
-            lcd.print(".");
-            lcd.print(remaining_volume%10);
-            lcd.print(" LITERS         ");
-
-
-            process_object.error_check();
-            if(!error_check_flag && !temp_drop_flag)
-            {
-                process_flag=1;
+                lcd.setCursor(0,1);
+                lcd.print("   ");
+                lcd.setCursor(3,1);
+                lcd.print(remaining_volume/10);
+                lcd.print(".");
+                lcd.print(remaining_volume%10);
+                lcd.print(" LITERS         ");
                 process_object.process_start();
             }
+            else if(preheat_flag)
+            {
+                lcd.setCursor(0,0);
+                // digitalWrite(YELLOW_LED,HIGH);
+                // digitalWrite(RED_LED,LOW);
+                lcd.print("PROCESS START  ");
+                lcd.setCursor(0,1);
+                lcd.print("PREHEATING...   ");
+                process_object.boiler_preheat();
+            }
+
+            process_object.error_check();
+            // if(!error_check_flag && !temp_drop_flag)
+            // {
+            //     process_flag=1;
+            //     process_object.process_start();
+            // }
         break;
 
         case PrimaryFillScreen:
@@ -367,12 +387,13 @@ void lcdclass::lcd_display()
         case ProbeCalibrationSettings:
             
             lcd.setCursor(0,0);
-            lcd.print("PR CAL ");
-            lcd.print(Heater_temp,1 );
-            lcd.print(" ");
+            lcd.print("PROBE CALB ");
+            // lcd.print(Heater_temp,1 );
+            // lcd.print(" ");
             lcd.print(calib_Heater1,1);
+            lcd.print(" ");
             lcd.setCursor(0,1);
-            lcd.print("Error   ");
+            lcd.print("Error  ");
             lcd.print(temp_error,1);
             lcd.print("  ");
         break;
@@ -402,18 +423,18 @@ void lcdclass::lcd_display()
                 digitalWrite(RED_LED,LOW);
                 if(toggle)
                 {
-                    if(zero_calib)
-                    {
-                        digitalWrite(BUZZER,HIGH);
-                        digitalWrite(YELLOW_LED,HIGH);
-                        lcd.setCursor(0,0);
-                        lcd.print(" CALIB MISSING!     ");
-                        lcd.setCursor(0,1);
-                        lcd.print("SET CALIBRATION   ");
+                    // if(zero_calib)                               // If error due to zero calibration
+                    // {
+                    //     digitalWrite(BUZZER,HIGH);
+                    //     digitalWrite(YELLOW_LED,HIGH);
+                    //     lcd.setCursor(0,0);
+                    //     lcd.print(" CALIB MISSING!     ");
+                    //     lcd.setCursor(0,1);
+                    //     lcd.print("SET CALIBRATION   ");
                         
-                    }
+                    // }
 
-                    if(closetap && !zero_calib)
+                    if(closetap)                   // Solenoid Error
                     {
                         digitalWrite(BUZZER,HIGH);
                         digitalWrite(YELLOW_LED,HIGH);
@@ -424,7 +445,7 @@ void lcdclass::lcd_display()
                         
                     }
 
-                    if(flow_error_checkflag && !zero_calib)
+                    if(flow_error_checkflag)      // If error due to flow issue
                     {
                         digitalWrite(BUZZER,HIGH);
                         digitalWrite(YELLOW_LED,HIGH);
@@ -448,7 +469,7 @@ void lcdclass::lcd_display()
                         }
                     }
 
-                    if(waterlevel_error_flag  && !flow_error_checkflag && !zero_calib)
+                    if(waterlevel_error_flag  && !flow_error_checkflag)            // If error due to water level issue
                     {
                         digitalWrite(BUZZER,HIGH);
                         digitalWrite(YELLOW_LED,HIGH);
@@ -457,7 +478,7 @@ void lcdclass::lcd_display()
                         lcd.setCursor(0,1);
                         lcd.print("  LEVEL SENSOR");
                     }
-                    if(Probe1_Err && !flow_error_checkflag && !waterlevel_error_flag && !zero_calib)
+                    if(Probe1_Err && !flow_error_checkflag && !waterlevel_error_flag)             // If error due to temperature probe issue
                     {
                         digitalWrite(BUZZER,HIGH);
                         digitalWrite(YELLOW_LED,HIGH);
@@ -483,7 +504,8 @@ void lcdclass::lcd_display()
             else
             {
                 lcd.clear();
-                primary_filling_flag=0;
+                pauseflag=0;
+                // primary_filling_flag=0;
                 digitalWrite(BUZZER,LOW);
                 digitalWrite(YELLOW_LED,LOW);
                 if(secondarytimerflag)
@@ -491,12 +513,14 @@ void lcdclass::lcd_display()
                     digitalWrite(BUZZER,LOW);
                     screen=SecondaryFillTimer;
                     process_object.Contactor1_start();
+                    heater_start=1;
                 }
-                else if(process_flag)
+                else if(process_flag || preheat_flag)
                 {
                     digitalWrite(BUZZER,LOW);
                     screen=ProcessScreen;
                     process_object.Contactor1_start();
+                    heater_start=1;
                     // if(dduflag)
                     // {
                     //     buzzerclass_object.heater_start();
@@ -507,12 +531,13 @@ void lcdclass::lcd_display()
                     digitalWrite(BUZZER,LOW);
                     screen=MainScreen;
                     mainscreenflag=1;
+                    heater_start=0;
                     // Serial3.println("1");
                 }
                 digitalWrite(BUZZER,LOW);
             }
 
-            if(!zero_calib && !closetap  && (process_flag || secondarytimerflag))
+            if( !closetap  && (process_flag || secondarytimerflag || preheat_flag))           // If error is not due to zero calibration or solenoid issue and process is running or secondary timer is running → check for errors continuously
             {
             process_object.error_check();
             }

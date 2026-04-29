@@ -38,6 +38,7 @@
 
 extern int prodtype[3];
 extern int  optime[4];
+extern float base_calibration[3];
 
 
 
@@ -66,7 +67,9 @@ extern bool closetap;
 extern bool  temp_drop_flag;
 extern bool time_skip;
 extern bool primary_filling_flag;
-extern bool zero_calib;
+// extern bool zero_calib;
+extern bool heater_start;
+extern bool preheat_flag;
 
 extern float calib_Heater1;
 extern float temp_error;
